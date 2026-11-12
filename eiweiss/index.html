@@ -204,6 +204,8 @@ label{font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:6px}
 .login{display:flex;flex-direction:column;gap:16px;padding-top:12vh}
 .login h1{margin:0;text-align:center;font-family:var(--font-display);font-weight:600;font-size:32px}
 .login form{display:flex;flex-direction:column;gap:14px}
+.lhead{margin:6px 0 10px}
+.lhead small{color:var(--muted);font-family:var(--font-body);font-size:15px;font-weight:700}
 .linkbtn{border:none;background:none;color:var(--accent);font-weight:800;text-decoration:underline;padding:0;font-size:inherit}
 </style>
 </head>
@@ -750,7 +752,12 @@ function showResults(query){
   const box = $("results"); if (!box) return;
   const words = norm(query.trim()).split(/\s+/).filter(Boolean);
   const h = history();
-  if (!words.length) { box.innerHTML = resHtml(favorites(h, sheetMeal)); return; }
+  if (!words.length) {
+    const all = allFoods().slice().sort((x, y) => cleanName(x.name).localeCompare(cleanName(y.name), "de", {sensitivity: "base"}));
+    box.innerHTML = '<h2 class="lhead">Oft gegessen</h2>' + resHtml(favorites(h, sheetMeal)) +
+      '<h2 class="lhead">Alle Lebensmittel A–Z <small>(' + all.length + ')</small></h2>' + resHtml(all);
+    return;
+  }
   const list = allFoods().filter(f => { const n = norm(f.name); return words.every(w => n.includes(w)); });
   list.sort((a, b) => {
     const as = norm(a.name).startsWith(words[0]) ? 1 : 0, bs = norm(b.name).startsWith(words[0]) ? 1 : 0;
@@ -759,7 +766,7 @@ function showResults(query){
     if (af !== bf) return bf - af;
     return a.name.localeCompare(b.name, "de");
   });
-  box.innerHTML = list.length ? resHtml(list.slice(0, 50)) : '<p class="hint">Nichts gefunden. Probier ein anderes Wort oder lege es unten neu an.</p>';
+  box.innerHTML = list.length ? resHtml(list.slice(0, 300)) : '<p class="hint">Nichts gefunden. Probier ein anderes Wort oder lege es unten neu an.</p>';
 }
 function resHtml(list){
   return '<div class="res">' + list.map(f =>
