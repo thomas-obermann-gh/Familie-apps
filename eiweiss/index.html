@@ -166,6 +166,7 @@ h2{margin:0;font-family:var(--font-display);font-weight:600;font-size:22px}
 .phead .ic{font-size:30px;line-height:1}
 .phead h3{flex:1;margin:0;font-family:var(--font-display);font-weight:600;font-size:22px;overflow-wrap:anywhere}
 .pbody{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;max-width:560px;width:100%;margin:0 auto}
+.pbody > *{flex-shrink:0}
 .search{width:100%;font-size:20px;padding:14px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface)}
 .search:focus{border-color:var(--accent);outline:none}
 .res{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
@@ -206,6 +207,16 @@ label{font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:6px}
 .login form{display:flex;flex-direction:column;gap:14px}
 .lhead{margin:6px 0 10px}
 .lhead small{color:var(--muted);font-family:var(--font-body);font-size:15px;font-weight:700}
+.zrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.zrow:last-child{border-bottom:none}
+.zrow .ic{font-size:24px;width:30px;text-align:center;flex:none}
+.zrow .n{flex:1;min-width:0}
+.zrow .n b{display:block;font-size:16px;overflow-wrap:anywhere}
+.zrow .n small{color:var(--muted);font-size:14px}
+.zg{width:78px;flex:none;text-align:right;font-size:18px;padding:8px 10px;border-radius:12px;border:2px solid var(--line);background:var(--surface);font-variant-numeric:tabular-nums}
+.zg:focus{border-color:var(--accent);outline:none}
+.zu{color:var(--muted);font-weight:700;flex:none}
+.zx{border:none;background:none;font-size:18px;color:var(--muted);width:40px;height:40px;flex:none}
 .linkbtn{border:none;background:none;color:var(--accent);font-weight:800;text-decoration:underline;padding:0;font-size:inherit}
 </style>
 </head>
@@ -368,6 +379,7 @@ const DEFAULT_FAV = DATA && DATA.fav || [];
 const state = {
   readOnly: false,
   days: {},
+  rezepte: {},           // gespeicherte Rezepte (Name -> Zutaten)
   foodRows: {},          // Zeilen aus eiweiss_lebensmittel: eigene Lebensmittel, geänderte Werte, Stückgewichte
   settings: {ziel: 25},
   cur: keyOf(new Date()),
@@ -442,11 +454,11 @@ function amountText(a){ return a.mode === "stk" ? fmtStk(a.stk) + " Stück" : fm
 const SB_URL = "https://fqhbjtudenacdsrqwdcl.supabase.co";
 const SB_KEY = "sb_publishable_6rn_pwfxv00TGt828ToZjg_kAvhPZsI";
 const CACHE = "eiweiss-cache-v1";
-function cacheSave(){ try { localStorage.setItem(CACHE, JSON.stringify({days: state.days, foodRows: state.foodRows, settings: state.settings})); } catch (e) {} }
+function cacheSave(){ try { localStorage.setItem(CACHE, JSON.stringify({days: state.days, foodRows: state.foodRows, rezepte: state.rezepte, settings: state.settings})); } catch (e) {} }
 function cacheLoad(){
   try {
     const c = JSON.parse(localStorage.getItem(CACHE) || "null");
-    if (c) { state.days = c.days || {}; state.foodRows = c.foodRows || {}; state.settings = Object.assign({ziel: 25}, c.settings || {}); foodsCache = null; return true; }
+    if (c) { state.days = c.days || {}; state.foodRows = c.foodRows || {}; state.rezepte = c.rezepte || {}; state.settings = Object.assign({ziel: 25}, c.settings || {}); foodsCache = null; return true; }
   } catch (e) {}
   return false;
 }
@@ -743,7 +755,7 @@ function openAdd(meal){
   openSheet(meal ? mealLabel(meal) + ": Essen suchen" : "Essen suchen",
     '<input class="search" id="q" type="search" placeholder="Tippe z. B. Kiwi" autocomplete="off" enterkeyhint="search" aria-label="Essen suchen">' +
     '<div id="results"></div>' +
-    '<div class="links"><button class="ghost" id="goManual">Eiweiß direkt eintragen</button><button class="ghost" id="goNew">Neues Lebensmittel</button></div>');
+    '<div class="links"><button class="ghost" id="goManual">Eiweiß direkt eintragen</button><button class="ghost" id="goNew">Neues Lebensmittel</button><button class="ghost" id="goRezept">Rezept berechnen</button></div>');
   $("q").addEventListener("input", () => showResults($("q").value));
   showResults("");
   setTimeout(() => { try { $("q").focus(); } catch (e) {} }, 250);
@@ -925,6 +937,147 @@ function saveZiel(all){
   closeSheet(); render();
 }
 
+/* ---------- Rezept-Rechner ---------- */
+const RZ_DRAFT = "eiweiss-rezept-entwurf";
+let rz = null;   // {name, zutaten:[{name,g,p,k}], fertig, stueck, orig, saved}
+try { rz = JSON.parse(localStorage.getItem(RZ_DRAFT) || "null"); } catch (e) { rz = null; }
+function rzKeep(){ try { localStorage.setItem(RZ_DRAFT, JSON.stringify(rz)); } catch (e) {} }
+function rzValues(z){ const f = findFood(z.name); return {p: f ? f.p : num(z.p), k: f ? f.k : num(z.k)}; }
+function rzCalc(r){
+  r = r || rz;
+  let g = 0, e = 0, kc = 0, kcKnown = true;
+  (r.zutaten || []).forEach(z => {
+    const v = rzValues(z), gz = num(z.g) > 0 ? num(z.g) : 0;
+    g += gz; e += gz * (v.p || 0) / 100;
+    if (isFinite(v.k)) kc += gz * v.k / 100; else if (gz) kcKnown = false;
+  });
+  const fertig = num(r.fertig != null ? r.fertig : r.gewicht_fertig);
+  const w = fertig > 0 ? fertig : g;
+  return {g, e, kc, w, p100: w > 0 ? e / w * 100 : 0, k100: w > 0 ? kc / w * 100 : 0, kcKnown};
+}
+function openRezepte(){
+  sheetMode = "rezepte";
+  const list = Object.values(state.rezepte).sort((a, b) => a.name.localeCompare(b.name, "de", {sensitivity: "base"}));
+  const draft = rz && !rz.saved && (rz.zutaten || []).length;
+  openSheet("Rezept berechnen",
+    '<p class="hint" style="text-align:left">Für selbst gekochte Gerichte: Zutaten mit Gramm eingeben, die App rechnet das Eiweiß pro 100 g aus und speichert das Gericht als Lebensmittel.</p>' +
+    '<button class="primary" id="rzNew">Neues Rezept</button>' +
+    (draft ? '<button class="ghost" id="rzResume">Weiter mit ' + esc(rz.name ? "„" + rz.name + "“" : "dem angefangenen Rezept") + "</button>" : "") +
+    (list.length ? '<h2 class="lhead">Gespeicherte Rezepte</h2><div class="res">' + list.map(r =>
+      '<button class="row" data-rezept="' + esc(r.name) + '"><span class="ic" aria-hidden="true">' + iconFor(r.name) + '</span><div class="n"><b>' + esc(cleanName(r.name)) +
+      "</b><small>" + (r.zutaten || []).length + " Zutaten · " + esc(fmt(rzCalc(r).p100)) + ' g Eiweiß in 100 g</small></div><div class="v">›</div></button>').join("") + "</div>" : ""),
+    {icon: "🧮"});
+}
+function rzStart(name){
+  const r = name && state.rezepte[name];
+  rz = r ? {name: r.name, zutaten: clone(r.zutaten || []), fertig: r.gewicht_fertig == null ? null : num(r.gewicht_fertig), stueck: r.stueck == null ? null : num(r.stueck), orig: r.name, saved: false}
+         : {name: "", zutaten: [], fertig: null, stueck: null, orig: null, saved: false};
+  rzKeep(); drawRezept();
+}
+function openRezept(name){ rzStart(name); }
+function rzAdd(name){
+  const f = findFood(name); if (!f) return;
+  const portion = portionFor(f);
+  rz.zutaten.push({name: f.name, g: portion || 100, p: f.p, k: isFinite(f.k) ? f.k : null});
+  rz.saved = false; rzKeep(); drawRezept();
+  setTimeout(() => { const ins = document.querySelectorAll(".zg"); const last = ins[ins.length - 1]; if (last) { try { last.focus(); last.select(); } catch (e) {} } }, 50);
+}
+function rzRows(){
+  if (!rz.zutaten.length) return '<div class="empty">Noch keine Zutaten. Unten suchen und antippen.</div>';
+  return rz.zutaten.map((z, i) => {
+    const v = rzValues(z);
+    return '<div class="zrow"><span class="ic" aria-hidden="true">' + iconFor(z.name) + '</span><div class="n"><b>' + esc(cleanName(z.name)) +
+      '</b><small id="zs' + i + '">' + esc(fmt((num(z.g) || 0) * (v.p || 0) / 100)) + ' g Eiweiß</small></div>' +
+      '<input class="zg" data-zi="' + i + '" inputmode="decimal" value="' + esc(fmt2(num(z.g) || 0)) + '" aria-label="Gramm ' + esc(cleanName(z.name)) + '"><span class="zu">g</span>' +
+      '<button class="zx" data-zdel="' + i + '" aria-label="' + esc(cleanName(z.name)) + ' entfernen">✕</button></div>';
+  }).join("");
+}
+function drawRezept(){
+  sheetMode = "rezept";
+  openSheet(rz.orig ? "Rezept ändern" : "Neues Rezept",
+    '<label for="rzName">Name des Gerichts<input class="field" id="rzName" value="' + esc(rz.name) + '" placeholder="z. B. Gemüsebratlinge"></label>' +
+    '<p class="hint" id="rzWarn" style="text-align:left"></p>' +
+    '<h2 class="lhead">Zutaten</h2><div class="res" id="rzList">' + rzRows() + "</div>" +
+    '<input class="search" id="rzQ" type="search" placeholder="Zutat suchen und antippen" autocomplete="off" aria-label="Zutat suchen">' +
+    '<div id="rzRes"></div>' +
+    '<label for="rzW">Gewicht vom fertigen Gericht in g (nur wenn anders als die Summe, z. B. nach dem Kochen)<input class="field" id="rzW" inputmode="decimal" value="' + (rz.fertig > 0 ? esc(fmt2(rz.fertig)) : "") + '"></label>' +
+    '<label for="rzS">Gewicht von 1 Stück in g (z. B. bei Muffins oder Bratlingen)<input class="field" id="rzS" inputmode="decimal" value="' + (rz.stueck > 0 ? esc(fmt2(rz.stueck)) : "") + '"></label>' +
+    '<div class="result" id="rzSum"></div>' +
+    '<div class="box" id="rzMuch"></div>' +
+    '<button class="primary" id="rzSave">Als Lebensmittel speichern</button>' +
+    (rz.orig ? '<button class="danger" id="rzDel">Rezept löschen</button>' : ""),
+    {icon: "🧮"});
+  rzUpdate();
+}
+function rzUpdate(){
+  const c = rzCalc();
+  rz.zutaten.forEach((z, i) => { const el = $("zs" + i); if (el) el.textContent = fmt((num(z.g) || 0) * (rzValues(z).p || 0) / 100) + " g Eiweiß"; });
+  const nm = (rz.name || "").trim();
+  $("rzWarn").textContent = nm && nm !== rz.orig && findFood(nm) ? "Diesen Namen gibt es schon. Beim Speichern werden dessen Werte ersetzt." : "";
+  $("rzSum").innerHTML = "<b>" + esc(fmt2(Math.round(c.p100 * 100) / 100)) + " g Eiweiß in 100 g</b><span>" +
+    esc(fmt(c.e)) + " g Eiweiß in " + esc(fmt(c.w)) + " g" + (c.kcKnown && c.w > 0 ? " · " + Math.round(c.k100) + " kcal in 100 g" : "") + "</span>";
+  const today = keyOf(new Date()), frei = zielOf(today) - totals(today).e;
+  let m;
+  if (!(c.p100 > 0)) m = "Sobald Zutaten mit Gramm drin sind, steht hier, wie viel davon heute noch passt.";
+  else if (frei <= 0.05) m = "Heute ist die Grenze schon erreicht.";
+  else {
+    const g = frei / c.p100 * 100;
+    m = "Heute sind noch <b>" + esc(fmt(frei)) + " g Eiweiß</b> frei. Das sind <b>" + esc(fmt(Math.floor(g))) + " g</b> von diesem Gericht" +
+      (rz.stueck > 0 ? " (" + esc(fmtStk(Math.floor(g / rz.stueck * 2) / 2)) + " Stück)" : "") + ".";
+  }
+  $("rzMuch").innerHTML = '<p class="hint" style="text-align:left;margin:0">' + m + "</p>";
+}
+function rzSearch(q){
+  const box = $("rzRes"); if (!box) return;
+  const words = norm(q.trim()).split(/\s+/).filter(Boolean);
+  if (!words.length) { box.innerHTML = ""; return; }
+  const list = allFoods().filter(f => { const n = norm(f.name); return words.every(w => n.includes(w)); })
+    .sort((a, b) => (norm(b.name).startsWith(words[0]) ? 1 : 0) - (norm(a.name).startsWith(words[0]) ? 1 : 0) || a.name.localeCompare(b.name, "de"))
+    .slice(0, 40);
+  box.innerHTML = list.length ? '<div class="res">' + list.map(f =>
+    '<button class="row" data-zadd="' + esc(f.name) + '"><span class="ic" aria-hidden="true">' + iconFor(f.name) + '</span><div class="n"><b>' + esc(cleanName(f.name)) +
+    "</b><small>" + esc(fmt(f.p)) + ' g Eiweiß in 100 g</small></div><div class="v">+</div></button>').join("") + "</div>"
+    : '<p class="hint">Nichts gefunden. Fehlt eine Zutat, lege sie zuerst als neues Lebensmittel an.</p>';
+}
+async function saveRezept(){
+  const name = (rz.name || "").trim();
+  if (!name) { toast("Bitte einen Namen für das Gericht eingeben."); return; }
+  if (!rz.zutaten.some(z => num(z.g) > 0)) { toast("Bitte mindestens eine Zutat mit Gramm eingeben."); return; }
+  const c = rzCalc();
+  const row = {name, zutaten: rz.zutaten.map(z => { const v = rzValues(z); return {name: z.name, g: num(z.g) || 0, p: v.p, k: isFinite(v.k) ? v.k : null}; }),
+               gewicht_fertig: rz.fertig > 0 ? rz.fertig : null, stueck: rz.stueck > 0 ? rz.stueck : null};
+  const old = rz.orig;
+  state.rezepte = Object.assign({}, state.rezepte, {[name]: row});
+  if (old && old !== name) { const r2 = Object.assign({}, state.rezepte); delete r2[old]; state.rezepte = r2; }
+  saveFoodRow({name, p: Math.round(c.p100 * 100) / 100, k: c.kcKnown ? Math.round(c.k100 * 10) / 10 : null, stueck: row.stueck, eigen: true, ausgeblendet: false});
+  const { error } = await sb.from("eiweiss_rezepte").upsert(row);
+  if (error) { fail(error); return; }
+  if (old && old !== name) await sb.from("eiweiss_rezepte").delete().eq("name", old);
+  rz.saved = true; rz.orig = name; rzKeep(); cacheSave();
+  toast(cleanName(name) + " gespeichert");
+  sheetMeal = null;
+  openAmount(findFood(name));
+}
+async function deleteRezept(){
+  const name = rz.orig; if (!name) return;
+  const r2 = Object.assign({}, state.rezepte); delete r2[name]; state.rezepte = r2; cacheSave();
+  const { error } = await sb.from("eiweiss_rezepte").delete().eq("name", name);
+  if (error) { fail(error); return; }
+  rz = null; rzKeep(); closeSheet();
+  toast("Rezept gelöscht. Das Lebensmittel bleibt in der Liste.");
+}
+document.addEventListener("input", e => {
+  if (sheetMode !== "rezept" || !rz) return;
+  const t = e.target;
+  if (t.classList.contains("zg")) { const i = +t.getAttribute("data-zi"); if (rz.zutaten[i]) { const v = num(t.value); rz.zutaten[i].g = isFinite(v) ? v : 0; } }
+  else if (t.id === "rzName") rz.name = t.value;
+  else if (t.id === "rzW") { const v = num(t.value); rz.fertig = v > 0 ? v : null; }
+  else if (t.id === "rzS") { const v = num(t.value); rz.stueck = v > 0 ? v : null; }
+  else if (t.id === "rzQ") { rzSearch(t.value); return; }
+  else return;
+  rz.saved = false; rzKeep(); rzUpdate();
+});
+
 /* ---------- Lebensmittel bearbeiten ---------- */
 let efFood = null;
 function openEditFood(food){
@@ -999,6 +1152,12 @@ document.addEventListener("keydown", e => {
 });
 
 document.addEventListener("click", e => {
+  const zr = e.target.closest("[data-rezept]");
+  if (zr) { openRezept(zr.getAttribute("data-rezept")); return; }
+  const za = e.target.closest("[data-zadd]");
+  if (za) { rzAdd(za.getAttribute("data-zadd")); return; }
+  const zd = e.target.closest("[data-zdel]");
+  if (zd) { rz.zutaten.splice(+zd.getAttribute("data-zdel"), 1); rzKeep(); drawRezept(); return; }
   const rg = e.target.closest("[data-range]");
   if (rg) { ovRange = +rg.dataset.range; ovSel = null; renderOverview(); return; }
   const od = e.target.closest("[data-ovday]");
@@ -1034,7 +1193,12 @@ document.addEventListener("click", e => {
   if (t.dataset.g) { amt.g = num(t.dataset.g); calcAmount(); return; }
   switch (t.id) {
     case "goManual": openManual(); break;
-    case "editFood": openEditFood(amt.food); break;
+    case "editFood": if (state.rezepte[amt.food.name]) openRezept(amt.food.name); else openEditFood(amt.food); break;
+    case "goRezept": openRezepte(); break;
+    case "rzNew": rzStart(null); break;
+    case "rzResume": drawRezept(); break;
+    case "rzSave": saveRezept(); break;
+    case "rzDel": deleteRezept(); break;
     case "efSave": saveEditFood(); break;
     case "efHide": hideFood(); break;
     case "kontoBtn": openKonto(); break;
@@ -1075,18 +1239,20 @@ async function fetchAll(build){
 }
 async function loadAll(){
   const since = addDays(keyOf(new Date()), -400);
-  const [rows, tage, foods, sets] = await Promise.all([
+  const [rows, tage, foods, sets, rez] = await Promise.all([
     fetchAll(() => sb.from("eiweiss_eintraege").select("*").gte("datum", since).order("datum").order("t").order("id")),
     fetchAll(() => sb.from("eiweiss_tage").select("*").gte("datum", since).order("datum")),
     fetchAll(() => sb.from("eiweiss_lebensmittel").select("*").order("name")),
-    fetchAll(() => sb.from("eiweiss_einstellungen").select("*").order("schluessel"))
+    fetchAll(() => sb.from("eiweiss_einstellungen").select("*").order("schluessel")),
+    fetchAll(() => sb.from("eiweiss_rezepte").select("*").order("name"))
   ]);
   const days = {};
   rows.forEach(r => { const k = r.datum; (days[k] = days[k] || {date: k, ziel: null, items: []}).items.push(rowToItem(r)); });
   tage.forEach(t => { (days[t.datum] = days[t.datum] || {date: t.datum, ziel: null, items: []}).ziel = num(t.ziel); });
   const fr = {}; foods.forEach(f => fr[f.name] = f);
   const st = {ziel: 25}; sets.forEach(x => { if (x.schluessel === "ziel" && num(x.wert) > 0) st.ziel = num(x.wert); });
-  state.days = days; state.foodRows = fr; state.settings = st; foodsCache = null;
+  const rz = {}; rez.forEach(r => rz[r.name] = r);
+  state.days = days; state.foodRows = fr; state.rezepte = rz; state.settings = st; foodsCache = null;
   $("note").hidden = true;
   cacheSave(); render();
 }
@@ -1103,6 +1269,11 @@ function subscribe(){
     })
     .on("postgres_changes", {event: "*", schema: "public", table: "eiweiss_lebensmittel"}, p => {
       if (p.new && p.new.name) { state.foodRows = Object.assign({}, state.foodRows, {[p.new.name]: p.new}); foodsCache = null; render(); }
+    })
+    .on("postgres_changes", {event: "*", schema: "public", table: "eiweiss_rezepte"}, p => {
+      const r = Object.assign({}, state.rezepte);
+      if (p.eventType === "DELETE") { if (p.old && p.old.name) delete r[p.old.name]; } else if (p.new && p.new.name) r[p.new.name] = p.new;
+      state.rezepte = r; cacheSave();
     })
     .on("postgres_changes", {event: "*", schema: "public", table: "eiweiss_einstellungen"}, p => {
       if (p.new && p.new.schluessel === "ziel" && num(p.new.wert) > 0) { state.settings = Object.assign({}, state.settings, {ziel: num(p.new.wert)}); render(); }
@@ -1142,7 +1313,7 @@ async function start(){
   sb = window.supabase.createClient(SB_URL, SB_KEY, {auth: {persistSession: true, autoRefreshToken: true, storageKey: "familie-apps-auth"}});
   sb.auth.onAuthStateChange(ev => {
     if (ev === "SIGNED_OUT") {
-      cacheClear(); state.email = ""; state.days = {}; state.foodRows = {}; foodsCache = null;
+      cacheClear(); state.email = ""; state.days = {}; state.foodRows = {}; state.rezepte = {}; foodsCache = null;
       if (channel) { sb.removeChannel(channel); channel = null; }
       if ($("loginView").hidden) showLogin();
     }
