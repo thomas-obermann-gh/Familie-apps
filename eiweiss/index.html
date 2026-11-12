@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eiweiß-Tagebuch</title>
+<meta name="theme-color" content="#1f8a62">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Layout: eine Spalte fürs Handy. Oben der Tagesring mit Ampel, darunter große Kacheln zum Antippen, dann die Liste des Tages. Eintragen in einem Blatt von unten, zuerst in Stück. */
+:root{
+  --bg:#f3f6f4;
+  --surface:#ffffff;
+  --ink:#1d2b26;
+  --muted:#5f716a;
+  --line:#dbe4df;
+  --accent:#1f8a62;
+  --accent-soft:#dff2e9;
+  --ok:#1f8a62;
+  --near:#b07a00;
+  --near-soft:#fbf0d2;
+  --over:#c8323c;
+  --over-soft:#fbe1e1;
+  --font-display:"Fredoka","Nunito",system-ui,sans-serif;
+  --font-body:"Nunito",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111917; --surface:#1a2522; --ink:#e7efeb; --muted:#9fb2aa; --line:#2c3b36;
+    --accent:#4cc795; --accent-soft:#1d3a2f; --ok:#33a676; --near:#b98a1a; --near-soft:#3a3018; --over:#e2566a; --over-soft:#3d1f24;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111917; --surface:#1a2522; --ink:#e7efeb; --muted:#9fb2aa; --line:#2c3b36;
+  --accent:#4cc795; --accent-soft:#1d3a2f; --ok:#33a676; --near:#b98a1a; --near-soft:#3a3018; --over:#e2566a; --over-soft:#3d1f24;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:18px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding:12px 16px 110px;display:flex;flex-direction:column;gap:18px}
+
+.daybar{display:flex;align-items:center;gap:8px}
+.daybar h1{flex:1;margin:0;text-align:center;font-family:var(--font-display);font-weight:600;font-size:26px;text-wrap:balance}
+.daybar h1 small{display:block;font-family:var(--font-body);font-size:15px;color:var(--muted);font-weight:600}
+.iconbtn{width:52px;height:52px;border-radius:16px;border:1px solid var(--line);background:var(--surface);font-size:26px;display:grid;place-items:center}
+.iconbtn:disabled{opacity:.3}
+
+.summary{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.ring{position:relative;width:210px;height:210px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .track{stroke:var(--line)}
+.ring .bar{stroke:var(--ok);transition:stroke-dashoffset .4s ease}
+.ring.near .bar{stroke:var(--near)}
+.ring.over .bar{stroke:var(--over)}
+.ring .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .big{font-family:var(--font-display);font-weight:600;font-size:50px;line-height:1;font-variant-numeric:tabular-nums}
+.ring .unit{font-size:22px}
+.zielbtn{margin-top:6px;border:none;background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:5px 13px;font-weight:700;font-size:16px}
+.status{font-family:var(--font-display);font-weight:600;font-size:26px;text-align:center;color:var(--ok)}
+.status.near{color:var(--near)}
+.status.over{color:var(--over)}
+.kcal{color:var(--muted);font-size:15px;font-variant-numeric:tabular-nums}
+
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;width:100%;padding-top:8px;border-top:1px solid var(--line)}
+.wd{border:none;background:none;padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);font-size:13px;font-weight:700}
+.wd .col{position:relative;width:70%;height:54px;background:var(--bg);border-radius:6px;overflow:hidden}
+.wd .fill{position:absolute;left:0;right:0;bottom:0;background:var(--ok);border-radius:6px}
+.wd .fill.near{background:var(--near)}
+.wd .fill.over{background:var(--over)}
+.wd .zl{position:absolute;left:0;right:0;border-top:2px dashed var(--muted);opacity:.7}
+.wd.cur{color:var(--ink)}
+.wd.cur .col{outline:2px solid var(--ink);outline-offset:1px}
+
+h2{margin:0;font-family:var(--font-display);font-weight:600;font-size:22px}
+.section{display:flex;flex-direction:column;gap:10px}
+
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{border:1px solid var(--line);background:var(--surface);border-radius:18px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:6px;min-height:104px}
+.tile .ic{font-size:32px;line-height:1}
+.tile b{font-weight:800;font-size:17px;line-height:1.25;overflow-wrap:anywhere}
+.tile small{color:var(--muted);font-size:14px;font-weight:600}
+
+.addbtn{width:100%;border:2px solid var(--accent);border-radius:18px;background:var(--surface);color:var(--accent);font-weight:800;font-size:20px;padding:16px;display:flex;align-items:center;justify-content:center;gap:10px}
+.addbtn span{font-size:26px;line-height:1}
+
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:13px 16px;border:none;border-bottom:1px solid var(--line);background:none;text-align:left;width:100%}
+.row:last-child{border-bottom:none}
+.row .ic{font-size:26px;line-height:1;width:32px;text-align:center;flex:none}
+.row .n{flex:1;min-width:0}
+.row .n b{display:block;font-weight:700;font-size:17px;overflow-wrap:anywhere}
+.row .n small{color:var(--muted);font-size:14px}
+.row .v{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.empty{padding:18px;color:var(--muted);text-align:center}
+.meals{display:flex;flex-direction:column;gap:12px}
+.meal{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.mhead{display:flex;align-items:baseline;gap:10px;padding:12px 16px;background:var(--accent-soft)}
+.mhead h3{flex:1;margin:0;font-family:var(--font-display);font-weight:600;font-size:19px}
+.mhead span{font-weight:800;font-variant-numeric:tabular-nums}
+.meal .row{border-bottom:1px solid var(--line)}
+.madd{width:100%;border:none;background:none;padding:12px 16px;text-align:left;color:var(--accent);font-weight:800;font-size:16px}
+.meal.none .mhead{background:var(--bg)}
+.wrap[hidden]{display:none}
+.golink{border:none;background:none;color:var(--accent);font-weight:800;font-size:17px;padding:4px 8px}
+.daybar .spacer{width:52px;flex:none}
+.range{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.kpi small{color:var(--muted);font-weight:700;font-size:14px}
+.kpi b{font-family:var(--font-display);font-weight:600;font-size:28px;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi.flag b{color:var(--over)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:var(--font-body);font-size:11px;font-weight:700}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .lim{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:4 4;opacity:.7}
+.chart .b-ok{fill:var(--ok)} .chart .b-near{fill:var(--near)} .chart .b-over{fill:var(--over)}
+.chart .sel{fill:none;stroke:var(--ink);stroke-width:2}
+.chart .hit{fill:transparent;cursor:pointer}
+.pick{display:flex;align-items:center;gap:10px;min-height:44px;margin:0;font-weight:700}
+.pick span{flex:1}
+.legend{display:flex;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:14px;font-weight:700}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.frow{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.frow:last-child{border-bottom:none}
+.frow .ic{font-size:24px;width:30px;text-align:center;flex:none}
+.frow .n{flex:1;min-width:0}
+.frow .n b{display:block;font-size:16px;overflow-wrap:anywhere}
+.frow .n small{color:var(--muted);font-size:14px}
+.fbar{height:6px;border-radius:3px;background:var(--bg);margin:5px 0 3px}
+.fbar i{display:block;height:100%;border-radius:3px;background:var(--muted)}
+.frow .v{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.frow .v small{display:block;color:var(--muted);font-weight:700;font-size:13px}
+.drow{display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border:none;border-bottom:1px solid var(--line);background:none;width:100%;text-align:left}
+.drow:last-child{border-bottom:none}
+.drow .n{flex:1;min-width:0}
+.drow .n b{display:block;font-size:16px}
+.drow .n small{display:block;color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.drow .v{text-align:right;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.drow .v small{display:block;font-size:13px;color:var(--over);font-weight:800}
+.morebtn{width:100%;border:none;border-top:1px solid var(--line);background:none;padding:12px;color:var(--accent);font-weight:800;font-size:16px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.segb{border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:11px 8px;font-weight:800;font-size:17px}
+.segb.on{border-color:var(--accent);background:var(--accent-soft)}
+.foot{color:var(--muted);font-size:14px;text-align:center}
+.note{background:var(--over-soft);border-radius:14px;padding:10px 14px;font-size:15px}
+
+.sheet{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;justify-content:flex-end;background:rgba(10,20,16,.45)}
+.sheet.open{display:flex}
+.panel{background:var(--bg);border-radius:24px 24px 0 0;max-height:94%;height:94%;display:flex;flex-direction:column;overflow:hidden;animation:up .22s ease}
+.panel.short{height:auto}
+@keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.panel{animation:none}.ring .bar{transition:none}}
+.phead{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.phead .ic{font-size:30px;line-height:1}
+.phead h3{flex:1;margin:0;font-family:var(--font-display);font-weight:600;font-size:22px;overflow-wrap:anywhere}
+.pbody{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;max-width:560px;width:100%;margin:0 auto}
+.search{width:100%;font-size:20px;padding:14px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface)}
+.search:focus{border-color:var(--accent);outline:none}
+.res{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.links{display:flex;flex-wrap:wrap;gap:10px}
+.ghost{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;font-weight:700;font-size:16px}
+.textbtn{border:none;background:none;color:var(--muted);font-weight:700;font-size:16px;text-decoration:underline;padding:6px 0;align-self:center}
+.qlabel{font-family:var(--font-display);font-weight:600;font-size:22px;text-align:center;margin:0}
+.amount{display:flex;align-items:center;gap:12px}
+.amount input,.amount output{flex:1;min-width:0;text-align:center;font-family:var(--font-display);font-size:44px;font-weight:600;padding:8px;border-radius:18px;border:2px solid var(--line);background:var(--surface);font-variant-numeric:tabular-nums;display:block}
+.amount input:focus{border-color:var(--accent);outline:none}
+.step{width:72px;height:72px;border-radius:20px;border:1px solid var(--line);background:var(--surface);font-size:34px;font-weight:800;flex:none}
+.sub{color:var(--muted);text-align:center;margin:-6px 0 0;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:10px 18px;font-weight:800;font-size:17px}
+.chip.on{background:var(--accent-soft);border-color:var(--accent)}
+.result{background:var(--accent-soft);border-radius:18px;padding:14px;text-align:center}
+.result b{display:block;font-family:var(--font-display);font-size:34px;font-weight:600;font-variant-numeric:tabular-nums}
+.result span{font-weight:700}
+.result.near{background:var(--near-soft)}
+.result.over{background:var(--over-soft)}
+.result.over span{color:var(--over)}
+.primary{width:100%;border:none;border-radius:18px;background:var(--accent);color:#fff;font-weight:800;font-size:22px;padding:18px}
+:root[data-theme="dark"] .primary{color:#0d1a15}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .primary{color:#0d1a15}}
+.danger{width:100%;border:1px solid var(--over);color:var(--over);background:none;border-radius:18px;font-weight:800;font-size:18px;padding:14px}
+label{font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:6px}
+.field{font-size:20px;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);width:100%}
+.field:focus{border-color:var(--accent);outline:none}
+.hint{color:var(--muted);font-size:15px;margin:0;text-align:center}
+.box[hidden]{display:none}
+.box{border:1px dashed var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 16px;display:none;align-items:center;gap:14px;font-weight:700;max-width:calc(100% - 32px)}
+.toast.show{display:flex}
+.toast button{border:none;background:none;color:var(--accent);font-weight:800;text-decoration:underline}
+.ro .addbtn,.ro .tiles{opacity:.5;pointer-events:none}
+.login{display:flex;flex-direction:column;gap:16px;padding-top:12vh}
+.login h1{margin:0;text-align:center;font-family:var(--font-display);font-weight:600;font-size:32px}
+.login form{display:flex;flex-direction:column;gap:14px}
+.linkbtn{border:none;background:none;color:var(--accent);font-weight:800;text-decoration:underline;padding:0;font-size:inherit}
+</style>
+</head>
+<body>
+<div class="wrap" id="loginView" hidden>
+  <div class="login">
+    <h1>Eiweiß-Tagebuch</h1>
+    <p class="hint" id="lIntro">Bitte melde dich an.</p>
+    <form id="loginForm" novalidate>
+      <label for="lEmail">E-Mail<input class="field" id="lEmail" type="email" autocomplete="username" inputmode="email" autocapitalize="off"></label>
+      <label for="lPw">Passwort<input class="field" id="lPw" type="password" autocomplete="current-password"></label>
+      <button class="primary" id="lBtn" type="submit">Anmelden</button>
+      <p class="hint" id="lMsg" role="status"></p>
+    </form>
+  </div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <div class="daybar">
+    <button class="iconbtn" id="prev" aria-label="Vorheriger Tag">‹</button>
+    <h1 id="dayTitle">Heute</h1>
+    <button class="iconbtn" id="next" aria-label="Nächster Tag">›</button>
+  </div>
+
+  <div class="summary">
+    <div class="ring" id="ring">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="track" cx="60" cy="60" r="52" fill="none" stroke-width="12"></circle>
+        <circle class="bar" id="ringBar" cx="60" cy="60" r="52" fill="none" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+      </svg>
+      <div class="mid">
+        <div class="big" id="total">0<span class="unit"> g</span></div>
+        <button class="zielbtn" id="zielBtn">Grenze 25 g</button>
+      </div>
+    </div>
+    <div class="status" id="status">Noch 25 g frei</div>
+    <div class="kcal" id="kcal">0 kcal</div>
+    <div class="week" id="week"></div>
+    <button class="golink" id="goOv">Übersicht ansehen ›</button>
+  </div>
+
+  <div id="note" class="note" hidden></div>
+
+  <div class="section">
+    <h2>Was hast du gegessen?</h2>
+    <div class="tiles" id="favs"></div>
+    <button class="addbtn" id="addBtn"><span>+</span> Anderes Essen suchen</button>
+  </div>
+
+  <div class="section">
+    <h2 id="listTitle">Heute gegessen</h2>
+    <div class="meals" id="meals"></div>
+  </div>
+
+  <p class="foot" id="foot">Lädt …</p>
+</div>
+
+<div class="wrap" id="ovView" hidden>
+  <div class="daybar">
+    <button class="iconbtn" id="ovBack" aria-label="Zurück zum Tag">‹</button>
+    <h1>Übersicht<small id="ovSub"></small></h1>
+    <span class="spacer" aria-hidden="true"></span>
+  </div>
+  <div class="range" role="radiogroup" aria-label="Zeitraum">
+    <button class="segb" data-range="7" role="radio">7 Tage</button>
+    <button class="segb" data-range="30" role="radio">30 Tage</button>
+    <button class="segb" data-range="90" role="radio">3 Monate</button>
+  </div>
+  <div id="ovBody" class="section"></div>
+</div>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="panel" id="panel">
+    <div class="phead">
+      <span class="ic" id="sheetIcon" aria-hidden="true"></span>
+      <h3 id="sheetTitle">Essen suchen</h3>
+      <button class="iconbtn" id="closeSheet" aria-label="Schließen">✕</button>
+    </div>
+    <div class="pbody" id="sheetBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"><span id="toastText"></span><button id="toastBtn" hidden>Rückgängig</button></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+const DATA = {"foods":[["Agavendicksaft",0.5,300.0],["Ahornsirup Aln",0.5,268.0],["Ajvar",1.2,78.0],["Amaranth gepufft",12.0,371.0],["Amerikaner",4.4,303.0],["Apfel",0.3,53.3],["Apfel-Mango-Mus (Demeter)",0.4,53.0],["Apfel-Zimt-Dinkelwaffeln (1=18)",6.0,548.0],["Apfelcrumble",2.17,179.0],["Apfelkuchen (Thomas 090323) (1=170g)",1.53,103.0],["Apfelkuchen vom Blech",2.82,96.0],["Apfelmus (Demeter)",0.3,50.7],["Apfelringe (Seeberger)",1.5,280.0],["Apfelsaft",0.1,46.0],["Apfelsine",0.0,50.0],["Aprikosen",0.5,44.0],["Aprikosen (getrocknet)",2.2,287.0],["Artischocke",1.7,92.0],["Aubergine",1.0,17.5],["Aubergine (Rist d')",1.2,75.0],["Auberginen Streichcreme Aln",5.0,279.0],["Auberginetorte (0223)",1.98,119.0],["Auberginetorte (aktuell)",1.81,122.4],["avocado",2.0,200.0],["Avocado Creme",1.8,140.0],["Babybel (1mini=22g)",22.0,295.0],["Babybel VEGAN (1mini=20g)",0.5,248.0],["Backmalz",10.1,361.0],["Backmischung Marmorkuchen Bauck",2.0,364.0],["Backpulver (= 17g=1 Pckg)",0.0,26.0],["Baguette",7.0,241.0],["Baguettebrötchen Fria",1.0,150.0],["Ballastomaxx",0.4,198.0],["Banane",1.2,73.3],["Bananenchips",2.0,519.0],["Bechamel",3.88,188.0],["Beerenmischung (Natural cool)",1.0,34.0],["Beerenmousse (240721)",1.73,220.0],["Bergblumenkäse (Andechser)",20.0,386.0],["Berliner",6.18,305.0],["Birnenkartoffelpuffer",1.96,112.7],["Birnenkartoffelpuffer (050123)",2.04,108.0],["Bitterschokolade 70%",6.7,594.0],["Blini_230423",1.83,204.0],["Blumenkohl",2.5,22.5],["Blumenkohlbratlinge (1=100g 051026)",2.85,null],["Blumenkohlminigratin Carrefour (1=120g)",2.9,89.0],["Blätterteig VK (Moin)",5.1,323.0],["Bohnen",2.6,null],["Bohnen (Brech-) grüne Natural CoolDemeter",2.4,37.0],["Bohnen (gruene frische angemacht_290624)",1.82,45.0],["Bohnen (gruene)",1.4,24.0],["Bohnen (gruene) als Füllung (+andereZutaten)",1.2,81.2],["Bohnen (weiße)",6.0,67.0],["Bohnen grüne Aln im Glas",1.8,92.0],["Bohnen in Tomatensauce",5.5,122.0],["Bounty (1=28,5g)",4.0,487.0],["Boursault",10.0,364.0],["Boursin",8.5,396.0],["Brat Pit",2.7,134.0],["Bratkartoffeln (220922)",1.93,104.0],["Bratwurst Art (Loprofin)",5.3,264.0],["Bratwürstchen (Geflügel/Ökoland=20g)",13.0,270.0],["Bresso (1=15g)",9.2,337.0],["Brezel (Metax eiweißarm)",0.3,262.0],["Brezel (Salz-/Roland mini)",10.0,402.0],["Brillat Savarin Käser",8.0,339.0],["Brioche",8.4,339.0],["Brokkoli",3.5,25.0],["Brombeeren",1.0,30.0],["Brot  Karotten_ewarm_270624",1.12,227.0],["Brot (FITBROT/Metax)",1.24,184.0],["Brot (Pfälzer Weißbrot Hammermühle)",0.9,239.0],["Brot (Steinofen HM)",0.6,231.0],["Brot 1=6g Knusper Mevalia",0.4,364.0],["Brot BonChoc (Schär)",3.0,311.0],["Brot dunkel (VitalSchär1=30g)",4.6,257.0],["Brot eiweißarm_(300323)",2.48,222.0],["Brot eiweißarm_Vollmehl (261222)",2.87,199.0],["Brot Laugenstange (HM 1=80)",1.8,244.0],["Brot Loprofin Fränkische Art",0.6,259.0],["Brot Loprofin Römer",0.4,256.0],["Brot SandwichSchär 1=46,7g)",5.4,224.0],["Brot/Bagel Schär (1=100g)",4.4,278.0],["Brot/Brötchen",8.4,262.0],["Brötchen (Baguette) Metax ew-arm (1=70g)",0.5,262.0],["Brötchen (Mohn) Loprofin ew-arm (1=87g)",0.6,300.0],["Brötchen CiabattaSchnitzer(1=55g)",3.0,184.0],["Brötchen CiabattaSchär (1=50g)",4.6,230.0],["Burger_Buns_Metax (60g)",0.6,230.0],["Burger_Buns_Schnitzer (62,5g)",3.4,206.0],["Burger_Karotten_cremefraiche",1.8,172.0],["BurgerMix_MetaX (31g=8 Bällchen)",3.9,371.0],["Butaris",0.0,898.0],["Butter",0.9,717.0],["Buttergemuese (Denree tiefgefroren)",2.4,106.0],["Butterkeks (Schär, 1=8g)",2.7,458.0],["Butterkeks HM glutenfrei (1=8,5; 4=34g)",7.3,471.0],["Butterkeks Leibniz glutenfrei (1=8,5; 4=34g)",2.4,106.0],["Butterkeks Schoko (Alnatura)",8.5,510.0],["Buttermilch",3.2,34.0],["Butterschmalz Bio",0.0,898.0],["Bällchen Aln Toscana",3.9,206.0],["Cashewnüsse",22.0,801.0],["Champignon",6.0,30.0],["Champignons (braune)",2.5,22.0],["Champignons (paniert)",5.6,184.0],["Chausson aux pommes (161021)",3.4,200.0],["Cheddar",25.0,410.0],["Chicken-Style Cambrooke (1=35g)",1.1,374.0],["Chili sin Carne (Tartex)",4.1,82.0],["Chinakohl",1.5,13.0],["Chips (Funny sourcream)",6.3,532.0],["Chips (Jumpys) paprika funny frisch",4.9,149.0],["Chips cheese&onion",5.8,538.0],["Chips de Rit",5.0,545.0],["Chips Pringles Pizza",6.0,516.0],["ChipsBrets Camenbert",6.3,522.0],["Chocolat Cote d'Or Noisettes",9.7,570.0],["Chocolat viennois Nestlé(1=100g)",3.1,152.0],["Chocolix (1=22g)",4.5,468.0],["Chocotino (4Qua=25g)",0.4,583.0],["Ciok (1=35g)",5.3,423.0],["Cookies (Mevalia, 1=10g)",0.7,471.0],["Cookies Schär (Choco chip, 1=8,4)",4.3,523.0],["Cookies Schär (double choco , 1=35g)",3.2,459.0],["Cookies Schär (white choco&berry , 1=35g)",2.0,445.0],["Cornetto Erdbeer (1=120ml/120 eingeben)",1.4,173.0],["Cornetto Zitrone (1=120ml/120 eingeben)",1.8,155.0],["Cornflakes \"Seitenbacher\"",6.0,371.0],["Cornflakes Alnatura",6.3,377.0],["Cornflakes Cookie Crisp",6.7,420.0],["Cornflakes Crunchy Pops (Metax)",0.4,427.0],["Cornflakes Hammermühle",5.5,370.0],["Cornflakes KitKat",7.8,420.0],["Cornflakes Loprofin",0.0,380.0],["Cornflakes natur (Barnhouse)",8.0,371.0],["Cornflakes Oreos",7.5,382.0],["Cornflakes Pepper Pig",7.9,433.0],["Cornflakes Schokoliert Hammermühle",5.7,425.0],["Cornflakes Tresor",7.0,448.0],["Corny Hafer Kraft Riegel (40g=2 Stck in Pckg)",8.2,460.0],["Couscous (ewarm)",0.3,364.0],["Couscous (légumes pour)",1.6,35.0],["Cranberries (Rapunzel)",0.9,331.0],["Creme brülee Rians (1=96g)",3.7,258.0],["Creme fraiche",2.5,290.0],["Crispies Paprika Schär",3.5,447.0],["Croissant (natur)",6.67,400.0],["Croissant (Schoko)",8.4,400.0],["Croissant Poensgen (1=75g) glutenfrei",2.0,349.0],["Croissant Schär (1=55g)",4.0,300.0],["Croissant TK Bioladen (1=78g,1=62g)",6.6,341.0],["Crumble Apfel",2.03,170.0],["Crunch Nestlé Flakes",6.9,402.0],["Cupcake Haribo (3,5g)",4.3,355.0],["Curlies (Mc Donald, 1 Port.: ca. 176g)",3.4,267.0],["Danette billes 3 chocos (1=117g)",3.5,146.0],["Danny + Sahne Kokos (1=60g)",3.5,176.0],["Danny + Sahne Schoko (1=115g)",2.6,144.0],["Danny + Sahne Schoko Viennois Netslé (1=100g)",3.1,152.0],["Datteln",2.2,309.0],["Dinkelflakes (Spielberger)",10.9,368.0],["Dinkelkörner",11.8,331.0],["Dinkelmehl Type 630",12.4,344.0],["Dinkelwaffeln Aln",12.0,372.0],["Dominosteine glutenfrei HM (1=15g)",3.7,404.0],["Donut (mit Zucker)",7.4,null],["Doppelkekse HM (1=29g)",3.4,477.0],["Duplo Chocnut (1=26g)",1.9,593.0],["Duplo Ferrero (18g)",6.1,555.0],["Edamer",25.5,317.0],["EEGZ",0.62,437.5],["Ei (1=58)",12.07,80.0],["Eiersalat Vegan",0.8,300.0],["Eiersatz (Biovegan)",24.0,351.0],["Eigelb (1=20g)",15.0,325.0],["Eis (Oreo 1=51g)",4.5,366.0],["Eis (Oreo 1=65g)",2.8,337.0],["Eis (Schrozenberger) Vanille",4.7,208.0],["Eis Extreme Cornet (1=83g)",4.43,null],["Eis Magnum Mandel (1=120ml)",4.0,280.0],["Eis Magnum Pistazie (1=75g)",4.3,333.0],["Eis McFlurry Mit OreoTopping",7.0,null],["Eis Schoko (Aln)",4.0,211.0],["Eiskugel Jogurt",3.07,88.0],["Eiskugel Pfefferminze (1=90g)",4.2,176.0],["Eistüte Bio Haselnuss 110 ml",3.0,217.0],["Eiswaffel (15g von Eisdiele)",8.0,null],["Eiweiß (1=30g)",20.0,75.0],["Emmentaler 45%",27.0,383.0],["Erbsen",6.6,89.0],["Erdbeerbisquitkuchen_Rezept Tanja",3.74,null],["Erdbeeren",0.8,32.0],["Erdbeeren Haribo (2,3g)",2.9,377.0],["Erdbeerkuchen",2.08,84.6],["Erdbeerkuchen ohne CP",2.09,87.0],["Erdbeerpudding",1.83,null],["Erdnüsse",24.8,593.0],["Essig",0.0,null],["Eszet Vollmich (1=9g)",6.4,529.0],["Falafel TK (1Stck=22g,Ökoland)",6.0,230.0],["Feige",1.43,50.0],["Feldsalat",2.0,10.0],["Fenchel",2.0,23.0],["Feta (Violife)",0.0,305.0],["Feta Salakis natur",15.0,269.0],["Filoteig (Tante Fanny)",11.0,335.0],["Flakes Apfel Honig (Loprofin)",0.3,380.0],["Flammenkuchen (Teig ew-arm)",4.11,221.4],["Flammenkuchen-Belag",1.34,276.0],["Flammenkuchenteig Metax",1.92,232.0],["Flan caramel carrefour (1=125g)",2.7,114.0],["Fleischwurst Vegan REWE",4.0,130.0],["Flohsamenschalen",2.3,222.0],["Focaccia (Schnitzer 1=55g)",3.0,184.0],["Frikassee (veg.)",3.4,118.0],["Frischkäse Kräuter",6.2,215.0],["Frischkäse Natur",5.0,218.0],["Frischkäse Paprika Weißenhorn",3.5,220.0],["Frischkäse StMoret",6.2,238.0],["Frischkäse vegan (körnig)",6.0,102.0],["Frühlingsrollen Aln Spinat",4.9,245.0],["Frühlingsrollen Soto",4.5,155.0],["Frühlingszwiebel",2.0,25.0],["Gache (1=45g)",9.6,355.0],["Galettes bretonnes (1=60g)",5.2,178.0],["Galettes de riz Carrefour (1=20g)",6.1,454.0],["Geflügelaufschnitt (1 Scheibe=8g) W. Brandenburg",15.0,162.0],["Gem_Stäbchen_Aln (1=31g)",4.9,185.0],["Gemuesebolognese (Zwergenwiese)",4.4,74.0],["Gemüse gegrillt (Aln)",1.6,57.0],["Gemüse TK (Ökoland, Rahm-)",2.1,84.0],["Gemüse vom Blech",1.39,39.0],["Gemüse_bunter Mix_Natural cool",3.1,46.0],["Gemüse_bunter Mix_Natural cool_Füllung (240824)",2.9,90.5],["Gemüseaufstrich curry-zucchini (Hof)",3.2,212.0],["Gemüseburger_Metax_240724",1.87,115.0],["Gemüsecreme Weißenhorner",3.2,220.0],["Gemüseeintopf_151222",1.31,36.1],["Gemüsegrillis",2.8,191.0],["Gemüserbratl. Mit Klossteig",2.91,93.3],["Gemüserbratl. Mit Klossteig (2024)",2.26,122.0],["Gemüsetaschen (Edeka Gyoza)",3.3,126.0],["Gereblé choco noisette (1=20g)",7.3,486.0],["Gerieb.Käse(Wilmersb.Pizzaschmelz)",0.0,313.0],["Gewürzgurken",1.4,null],["Giotto (1 Kugel=4,3g)",10.1,632.0],["Gitterkartoffeln (McDonald, 1=130g))",3.0,312.0],["Glasnudelsalat",2.69,null],["Glückssterne (1=34g)",9.8,282.0],["Gnocchi",2.8,144.0],["Gnocchi (Burger) Spinat",2.6,144.0],["Gnocchi (Burger) Süsskartoffel",2.4,153.0],["Gnocchi Bio-Fix (30g-Beutel)",9.1,287.0],["Gnocchi-Gericht mit Bio-Fix",1.87,121.0],["Gojibeeren",12.0,343.0],["Gouda",23.33,296.7],["Granatapfel",0.8,76.0],["Gratin de légumes St Éloi (1=120g)",3.9,108.0],["Griess (hartweizen)",13.1,348.0],["Griess (Weichweizen)",10.3,321.0],["Griess Metax (eiweißarm)",0.5,363.0],["Griessbrei",4.38,381.0],["Griessschnitten",5.23,128.0],["Grießkartoffelbratlinge 081223",1.69,166.0],["Grillinis (Gemüse)",2.7,204.0],["Grillinis (Kartoffelpuffer)",3.0,176.0],["Grissini  (Schär, 1=5g)",3.8,408.0],["Grissini Sesam (Schnitzer)",2.1,437.0],["Grissini Tomate (Schnitzer)",3.3,424.0],["Grünkern",11.1,352.0],["Gurke",0.5,17.5],["Gürkchen",1.4,66.0],["Haferflocken",13.5,372.0],["Haferflocken fein",14.0,361.0],["Haferjogurt Cow Vanille",0.6,108.0],["Haferjogurt natur",0.7,83.0],["Hamburger-Brötchern (Schär)",3.2,226.0],["Hanuta (1=22g)",7.6,542.0],["Happy Coco Choco",1.6,177.0],["Happy Coco Strataciella",1.0,133.0],["Haribo (sachet 12g)",5.3,349.0],["Haselnusskerne",13.2,677.0],["Haselnusswaffeln de Rit (1=29g)",1.9,496.0],["Haselnüsse",12.0,648.0],["Hefe",35.0,325.0],["Heidelbeeren",0.8,36.0],["Himbeeren",1.6,32.0],["Hirse",11.0,365.0],["Holstener Liesel",1.0,783.0],["Honig (Blüten) Aln",0.4,302.0],["Honigkugeln",7.0,385.0],["Honigwaffeln (1=30g)",4.0,429.0],["Hot Breakfast (1 Beutel=57g)",0.2,395.0],["Hummus mit Tahin (Pur)",1.1,180.0],["Instantmehl",10.0,null],["Joghurt (1,8)",4.7,null],["Joghurt (3,5 %)",3.93,69.0],["Joghurt (Frucht 3,3))",3.3,135.0],["Joghurt (Fruchtknusper)",4.2,130.0],["Joghurt Almighurt Vegan (175g)",1.1,86.0],["Joghurt Carrefour (1=125g)",3.0,98.0],["Jogurt  Stracciatella Denree",3.2,130.0],["Jogurt (Rahm-) Stracciatella Andechser",2.5,146.0],["Jogurt BM Erdbeer (1=125g)",2.4,115.0],["Jogurt BM M<rtille (1=120g)",3.0,97.0],["Jogurt griechisch Demeter",3.3,120.0],["Jogurt griechisch Elina (1=150g)",3.3,137.0],["Jogurt Mascarpone Andechser",2.7,136.0],["Jogurt natur 10 %",5.0,175.0],["Jogurt Schrozenb. natur (3)",4.1,70.0],["Jogurt Schrozenb. Stichfest",3.8,69.0],["Jogurt Schrozenb. Stichfest (2)",3.5,70.0],["Jogurt vegan zitrone (HarvestMoon)",0.6,118.0],["Jogurt Zott",2.5,134.0],["Kaese (Wilmersburger)",0.0,304.0],["Kaese Simply Burgerscheiben",0.8,251.0],["Kaese Simply mild",1.4,275.0],["Kaese Simply Reibegenuss",3.2,282.0],["Kaese Simply würzig",0.7,269.0],["Kakaopulver Alnatura",7.2,359.0],["Kakaopulver Bensdorp",19.9,359.0],["Kakaopulver Caotina",11.0,374.0],["Kaki",1.0,70.0],["Karotten",1.0,25.0],["Karottenbrot_ewarm_100323",1.57,212.0],["Kartoffel-Spinat-Gratin (310323)",1.58,96.0],["Kartoffel-Zucchini-Gratin (040524)",1.4,78.0],["Kartoffelchips \"Rustic\" McCain",2.5,162.0],["Kartoffeln",2.0,70.0],["Kartoffelpuffer  (Restaurant Michel's, 1=42g-gebraten=60gRohzustandeingeben)",3.0,175.0],["Kartoffelpuffer (020926)",2.35,129.0],["Kartoffelpuffer (221023)",2.53,136.0],["Kartoffelpuffer (271223)",2.49,134.0],["Kartoffelpuffer gekauft (Pahmeyer)",3.0,175.0],["Kartoffelpuffer natural cool",1.8,100.0],["Kartoffelpüree (Kuhmilch)",4.51,205.0],["Kartoffelpüree (proZero)",2.28,112.0],["Kartoffelsalat (24022023)",1.5,60.8],["Kartoffelwurst mit Paprikastreifen",5.4,null],["Kastanienbrot",1.43,181.0],["Kefir (Schrozenberger)",3.8,57.0],["Keks Choceur Schoko_Milch (1=33,3g)",7.6,535.0],["Kekse Baiocchi (Mulino Bianco 1=10g)",8.0,509.0],["Kekse Bjorg (1Pckg=45g)",7.1,387.0],["Kekse Erdbeer Chabrior (1=7g)",4.9,357.0],["Kekse Glutenfrei Schär",2.7,458.0],["Kekse Himbeere (Allos)",5.3,461.0],["Kekse La Barquette Choco Bordeaux (3=20g)",6.5,489.0],["Kekse Oreo (1=11)",5.3,476.0],["Kekse Oreo Gerblé (1=15,6)",3.6,469.0],["Kekse Schoko Glutenfrei DM (1=28,12)",4.4,475.0],["Kekse Zoo (Leibniz)",7.9,445.0],["Ketchup",1.6,null],["Kichererbsen",2.0,27.0],["Kidneybohnen",7.6,null],["Kinder Bueno (21,5g=1)",8.6,572.0],["Kinder Choco Fresh (20,5 = 1)",7.3,577.0],["Kinder country (1=23,5g)",8.6,561.0],["Kinder maxi king (1=35g)",6.7,521.0],["Kinder Paradiso (29g)",5.8,425.0],["Kinder Pingui (30g)",7.0,450.0],["Kindercountry (1=23,5)",8.6,561.0],["Kinderriegel (21g)",8.7,564.0],["Kirschen süß",1.0,477.0],["Kitkat (choco 1=41,5g))",7.0,518.0],["Kitkat (weiß 1=41,5g))",8.3,515.0],["Kitkat Chunky (choco 1=40g))",7.8,516.0],["Kitkat Vegan",2.7,515.0],["Kiwi",1.0,60.0],["Kloßteig Denree",1.5,97.0],["Kloßteig Denree mit Paniermehl HM",1.6,109.0],["Kloßteigbratlinge",2.26,124.0],["Knoblauch",6.0,136.0],["Knoppers (1 mini=12g)",8.8,550.0],["Knoppers Nussriegel (1 =40g)",8.4,535.0],["Knusperhafer Aln",12.0,386.0],["Knuspersterne HM glutenfrei",2.6,416.0],["Knäckebrot Schär (1=15g)",4.0,258.0],["Knödel mini (1=23g)",1.8,117.0],["Knödel_Brezen_Metax_130624",1.16,180.0],["Kohlrabi",2.0,25.0],["Kohlrabi angemacht",2.2,46.0],["Kokos & Schoko (Rapunzel)",4.0,524.0],["Kokos geraspelt Aln",7.8,649.0],["Kokosflocken",5.9,646.0],["Kokoshappen (Rapunzel)",4.7,561.0],["Kokosjogurt natur vegani (Bioladen)",0.6,93.0],["Kokosmakrone",6.88,362.5],["Kokosmilch",2.02,197.0],["Kokosnussecken Metax",1.7,443.0],["Kokosöl Aln",0.5,828.0],["Kompott Apf-Aprikose (Denree)",0.5,56.0],["Kompott Apfel-Erdbeer (1=100g) Bordeaux",0.5,74.0],["Kompott Pfirsich-Aprikose (Bonne Maman)",0.9,82.0],["Kondensmilch (Milchmädchen)",7.6,331.0],["Konfitüre Aprikose (Allos)",0.5,198.0],["Kresse",4.0,24.0],["Kroketten Bioladen (1Stck=18g)",3.2,150.0],["Kroketten Frischkäse (1Stck=55g)",3.0,196.0],["Kroketten Herzoginnen Edeka",2.5,null],["Kägi fretti kokos (1=7g)",6.0,579.0],["Käse (Violife Cheddar)",0.0,265.0],["Käse (Violife Mozzarella)",0.0,298.0],["Käse Kräuter Simply (1 Scheibe=19g)",0.5,268.0],["Käse Le rond Violife",0.0,323.0],["Käse Simply zum Snacken",0.5,251.0],["Käse Veggi Filata (1=24g)",1.2,302.0],["Käsespätzle",11.2,260.0],["Kürbis (Hokkaido)",1.0,25.0],["Kürbisbratlinge MetaX",1.09,73.0],["Kürbiskerne",37.0,582.0],["Lachsschinken",3.1,64.0],["Lasagne_ewarm_300124",1.47,123.4],["Lasagneplatten",0.4,360.0],["Lauch",2.0,25.0],["Lauchzwiebeln",2.0,25.0],["Laugenbrötchen Schär (1=50g)",3.3,247.0],["Laugenstange/Brezel Metax (1=75g)",0.3,262.0],["Laugenstange/Brezel Poensgen (1=76g)",3.1,250.0],["Leberwurst (veg.) Pommersche",4.5,262.0],["Leberwurst vegan Grünmeier",5.2,275.0],["Lebkuchen (Akora Z, 3=38g))",4.6,394.0],["Lebkuchen (Weiß, 1=30g))",6.5,397.0],["Lebkuchen Bahlsen (schoko, 1=29g))",5.8,405.0],["Leerdammer Caractere",24.5,368.0],["Leinsamen",18.29,534.0],["Liegeois (1=95g)",0.7,116.0],["Lindt Nikolaus (10g)",7.4,570.0],["Lindt-Kugel (1=13g)",4.8,631.0],["Loprofin Bratwurst",5.5,260.0],["Loprofin Brot Fränkische Art",0.6,259.0],["Loprofin Flakes",0.0,374.0],["Loprofin Herb Crackers",0.0,444.0],["Loprofin Lyoner",5.3,168.0],["Maasdamer",30.0,350.0],["Macedoine",2.2,39.0],["Macedoine&Mayo",1.68,350.0],["Madeleine (1=25g)",6.0,450.0],["Madeleine (Schär glutenfrei) 1=30g",4.3,468.0],["Madeleine (Schär glutenfrei) 1=50g",3.4,399.0],["Madeleine mini(1=16g) von Monti",5.1,476.0],["Magnum double Popcorn (1=72g)",3.5,324.0],["Magnum Pink Lemonade (1=69,5g)",3.8,310.0],["Magnum Raspberry vegan (71g)",1.5,316.0],["Magnum vegan almond (1=72g)",2.0,249.0],["MagnumKirsche (1=72g)",2.8,299.0],["Magnun mini Schoko (1=44g)",4.5,339.0],["Magnun mini YoghurtRasperry (1=45g)",3.0,318.0],["Mais",2.9,80.0],["Mais Amaranth Waffel (Al) 1=7g",8.7,392.0],["Maiskolben vakuumiert (1=142g) (226;84)",3.1,95.0],["Makadamia Nüsse",8.0,718.0],["Malzbier",0.4,44.0],["Malzbrot",1.82,238.0],["Mandeldrink",0.6,16.0],["Mandelmus (weißes)",24.0,657.0],["Mandeln",17.0,634.0],["Mango",0.51,65.0],["Mango Fruchtmark (Govinda)",0.3,65.0],["Mango getrocknet (Rapunzel)",1.9,341.0],["Mango Lassi (selbstgemacht)",0.27,75.5],["Mango Lassi vegan",1.4,74.0],["Mangold",2.0,25.0],["Mangold_Lasagne",1.21,116.4],["Marmelade",0.0,280.0],["Marmorkuchen_MetaX",1.73,322.0],["Marmorkuchen_vegan_thermomix_010624",3.39,381.4],["Marmorküchlein BM (1=30g)",5.2,419.0],["Marschmallow (1=6,1 g)",4.5,323.0],["Marschmallow Bio",0.5,326.0],["Marzipan",12.0,465.0],["Mayonnaise (Byodo)",1.3,720.0],["Mayonnaise (Byodo, vegan)",1.5,476.0],["McFlurry Mix&Match ohne Topping (1=142g)",3.4,139.0],["McSundae mit Schokosauce",5.5,278.0],["Meerrettichwuest in Aspik",10.0,180.0],["Mehl (Dinkel  630)",11.5,341.0],["Mehl (Dinkel 630)",12.0,null],["Mehl (Eiweißarm)",0.4,354.0],["Mehl (glutenfrei HM)",4.8,353.0],["Mehl (Metax Sunny Plus))",1.4,326.0],["Mehl (normal)",9.8,335.0],["Mehl (Pizzamehl Heimatmühle)",9.8,340.0],["Mehl (Vollmehl Nestelberger)",11.0,302.0],["Mehl 550",11.0,348.0],["Mehl Fate",0.27,352.0],["Melone",1.33,50.0],["Metzgers Beste (1=37g) fränkisch",5.2,244.0],["Mexico Mix",3.4,81.0],["Mexico Mix Demeter&Mayo",3.05,188.0],["Mikado",6.8,484.0],["Milch & Schoko - Aufstrich",2.7,554.0],["Milch 1,5%",3.6,46.0],["Milch 3,5%",3.4,69.0],["Milch ProZero (pro 100ml, 1=250ml)",0.0,67.0],["Milchbroetchen (39g)",8.7,355.0],["Milchreis",4.03,40.5],["Milchschnitte (1=28g)",7.9,421.0],["Milka Cake&Choch (1=35g)",5.3,435.0],["Mohrenkopf Köhler (30g)",3.2,348.0],["Monte Snack (1=29g)",5.8,452.0],["Monte, Zott (1 kl.=55g)",2.6,183.0],["Mortadèle Pute",12.0,194.0],["Mortadélice",10.7,184.0],["Mousse au choco Greenhorn Bio (1=100g)",2.7,295.0],["Mousse au Choco Lalaitiere (1=57g)",5.2,221.0],["Mousse au choco vegan (1=55g)",2.2,163.0],["Mousse au choco vegan (1=70g)",1.9,200.0],["Mousse au Chocolat Carrefour(1=60g)",5.1,175.0],["Mozzarella EW-arm (Hafer/Mandel)",3.5,168.0],["Muesli Kölln Choc Crunchy",8.5,458.0],["Muffin (Meranetti/Schär/1=50g)",5.0,384.0],["Muffin choco BM (1=30g)",5.1,456.0],["Muffin Edeka Smarties (1=60g)",4.2,434.0],["Muffin Metax (1=67g)",0.6,361.0],["Muffins mini Smarties ( 1=30g)",5.7,368.0],["Muskat",0.0,0.0],["Müsli (Früchte Aln.)",7.8,320.0],["Müsli Barnhouse Krunchy",8.6,434.0],["Müsli Faller glutenfrei",5.7,362.0],["Müsli KöllnJoghurt Himbeer",10.0,412.0],["Müsli Rainbow Love",10.0,395.0],["Müsli Vitaflow",4.0,375.0],["Müsliriegel 230222 (1=37g)",6.94,390.0],["Napolitain (1=30g)",4.4,429.0],["Naturreis Bio",7.8,352.0],["Nektarine",0.8,42.4],["Nudelauflauf_cremiger_Chefkoch",1.27,150.0],["Nudeln (eiweissarm)",0.4,360.0],["Nudeln (Glas_Arche)",0.0,349.0],["Nudelsalat vegan Popp",2.0,250.0],["Nutella",6.9,600.0],["Nutella B ready (1=22g)",7.2,522.0],["Obstsalat",0.52,61.0],["Oignons Rings",3.0,244.0],["Oliven Kalamata",1.6,248.0],["Olivenpaste Demeter",1.1,223.0],["Orangensaft",0.7,45.0],["Oreo Fresh Milk-Snack (1=30g)",5.2,516.0],["OreoMousse (1=55g)",2.8,356.0],["Paille d'Or",4.3,367.0],["Pain au chocolat",6.6,344.0],["Pain aux raisins",5.2,293.0],["Pain brioché (Schär, 1=31g)",3.0,262.0],["Pain de viande (13g)",14.0,202.0],["Pancake französische (1=35g)",5.7,355.0],["Pancake glutenfrei (1=30g)",6.6,454.0],["Paniermehl",13.6,355.0],["Paniermehl HM glutenfrei",5.3,401.0],["Panna cotta (Rians&Bio)",2.5,179.0],["Papaya",1.0,30.0],["Paprika (rot)",1.0,33.0],["Paprika gefüllt_010822",1.67,67.5],["Paprikalyoner Art (Loprofin)",5.6,170.0],["Paranuss",17.0,687.0],["Parmesan eiweissarm (Simply)",3.6,315.0],["Parmesan Violife",1.4,272.0],["Pate Vegan Vegandeli",5.2,275.0],["Petersilie TK (Ökoland)",2.8,38.0],["Petit Basque",22.0,450.0],["Pfannkuchen_Ewarm_151123",1.94,161.0],["Pfannkuchen_Ewarm_280324",2.15,165.5],["Pfeffer",0.0,0.0],["Pfirsich",0.8,40.0],["Pflaumen",0.8,null],["Pflaumen (Soft-) Bio Edeka",1.6,230.0],["Physalis",3.0,90.0],["Pick-up (28g)",6.9,511.0],["Pilze",2.8,null],["Pilzsauce",1.8,106.0],["Pinienkerne",24.0,599.0],["Pizzasauce_270723",1.18,58.9],["Pizzateig EW-arm_250523",3.45,244.0],["Pizzateig_090922 (120g geben)",5.43,253.0],["Poensgen Croissant (1=75g) glutenfrei",2.0,249.0],["Poensgen Rosinenbrötchen",2.9,268.0],["Poisson (substitut de)",2.8,360.0],["Pombär",3.1,508.0],["Pommes (RöstiFries Edeka)",3.1,240.0],["Pommes dauphines TK",1.7,195.0],["Pommes fritiert (150g=20Stck)",4.0,273.0],["Pommes noisettes",2.8,187.0],["Pommes Wellenschnitt (Ökoland)",2.8,156.0],["Popcorn",12.5,362.5],["Popcorn ewarm",4.4,null],["Popcorn glutenfrei Intermarche",3.0,403.0],["Popcorn Trafo salzig",8.5,509.0],["Porridge (Dinkel) Spielberger",14.2,353.0],["Porridge_nurPulver (Cambrooke)",0.1,444.0],["Pudding Schoko",4.5,388.0],["Puddingpulver Karamell",3.3,77.0],["Puddingpulver Lebkuchen",0.4,365.0],["Puddingpulver Vanille",0.6,353.0],["Puffreis Rumba Vollmich",7.1,543.0],["Puffreis Rumba Zartbitter",4.6,530.0],["Putenschinkenwurst",14.8,169.0],["Püree ewarm(Rezept Thermomix)",2.29,99.0],["Quark (20%)",12.0,104.0],["Quiche (4,10 EW)",4.1,131.4],["Quiche Ratatouille",2.54,148.0],["Quiche Spinat (090623)",3.38,204.0],["Quiche_Bohnen_140626",1.33,132.0],["Quiche_Bunter Gemüsemix",2.22,null],["Quiche_Zucchini (290922)",2.82,151.0],["Quittengelee (darbo)",0.0,228.0],["Raffaello (1=12g)",7.4,627.0],["Raffaellotorte",3.81,262.0],["Rahmgemüse Ökoland",2.1,84.0],["Rahmspinat TK",2.0,45.0],["Ratatouille (020724)",1.08,57.0],["Ratatouille BioCarrefour",1.1,60.0],["Reibegenuss (Simply)",3.2,284.0],["Reis (eiweissarm)",0.4,355.0],["Reismilch",0.5,50.0],["Reispfanne (310524)",0.92,156.0],["Reiswaffeln (1=16g,Dennree Honig)",6.9,379.0],["Ricotta",8.0,165.0],["Riegel Allos Cranberry (1=40g)",4.5,354.0],["Riegel Allos Dattel-O. (1=40g)",3.5,338.0],["Riegel Allos Mango (1=40g)",4.0,340.0],["Riegel Allos Maracuja (1=40g)",4.4,344.0],["Riegel Aln Apfel Honig",4.8,374.0],["Riegel Aln Beere",5.8,376.0],["Riegel Aln GranatA (1 Häppchen=9,37,4=37,5g)",5.6,386.0],["Riegel Aln Kokos",4.0,473.0],["Riegel Aln Obstsalat",4.7,394.0],["Riegel Aln Vielfrucht",4.8,421.0],["Riegel Apfel",4.0,340.0],["Riegel Banane Apfel",3.3,341.0],["Riegel BananeSchoko(Rapunzel)",6.0,407.0],["Riegel Corny Erdbeer (1=25g)",6.4,438.0],["Riegel Corny Kokos (1=25g)",5.3,477.0],["Riegel Corny Milch (1=30g)",5.8,449.0],["Riegel Corny SchokoBanane (1=50g)",4.9,422.0],["Riegel FF Aronia (1=23g)",6.4,383.0],["Riegel FF Mango&O (1=23g)",6.4,376.0],["Riegel Fruchttasche (Fruchtbar D/Erdb/A/1=22g)",5.3,382.0],["Riegel Fruit mix",7.6,319.0],["Riegel Gerblé (1=20g)",7.3,486.0],["Riegel Gerblé (1=20g) Framb.",5.3,395.0],["Riegel Ingwer",3.7,534.0],["Riegel Kakao Aln (30g)",9.0,412.0],["Riegel made good bio (1=24g)",6.5,436.0],["Riegel made good bio Granola (1=24g)",7.0,423.0],["Riegel Mandel Cranberry Aln",7.0,397.0],["Riegel Mango-Baobab",1.8,312.0],["Riegel Multi Aln (1 Häppchen=9,37,4=37,5g)",6.6,401.0],["Riegel Müsli Schoko Aln (25g)",6.1,421.0],["Riegel Power-Mix",6.9,371.0],["Riegel Rapunzel Apfel",4.0,340.0],["Riegel Rapunzel Ayurveda",4.5,351.0],["Riegel Rapunzel Kakao-Orange",4.5,312.0],["Riegel Rapunzel Kokos",4.0,547.0],["Riegel Sauerkirsch",3.2,330.0],["Riegel Schoko (Aln 1=25g)",6.1,421.0],["Riegel Spiruline (1=30g)",10.1,526.0],["Romana",2.0,22.0],["Rosinen",3.07,299.0],["Rosinenbrot Poensgen (1=69g)",2.3,284.0],["Rosinenbrötchen Poensgen (1=75g)",2.9,268.0],["Rote Beete",1.5,null],["Rote Grütze Bio",0.5,121.0],["Rotkohl",1.5,94.0],["Rotkohl (verfeinert)",0.73,68.0],["Röstinchen (=29g)",2.8,197.0],["Sahne",2.3,310.0],["Sahnesteif (Aln_8g)",0.5,368.0],["Saint  André",10.9,453.0],["Salami Denree (veg. 1=10g)",5.9,237.0],["Salami Mühlen (veg. 1=11g)",6.4,134.0],["Salz",0.0,0.0],["Salzstangen (HM)",1.8,366.0],["Salzstangen (Metax)",0.7,386.0],["Sauce bolognese veg. (Tartex",3.5,85.0],["Sauce Burger 4 (MetaX)",2.15,443.0],["Sauerrahm",3.3,117.0],["Saure Pommes",3.2,337.0],["Sausage Mix Metax (1 Beutel=30g)",3.1,400.0],["Schaumzuckermischung (arko)",5.0,375.0],["Schichtkäse",13.33,80.0],["Schinkenspicker Mortadella (veg. 1=12g)",2.2,118.0],["Schinkenwürfel Biolust",20.3,224.0],["Schmand",2.7,240.0],["Schnecken (Lauch&Paprika)",1.3,225.0],["Schnittlauch",2.7,34.0],["Schokobrötchen (1=45g=3,2)",7.2,423.0],["Schokobrötchen Schär (1=55g)",3.3,311.0],["Schokoeier Ostern (1=11g)",6.9,580.0],["schokokeks",8.0,null],["Schokokeks (Schär,1=20g)",4.2,474.0],["Schokokissen (Dennree)",9.1,445.0],["Schokokuchen (Dr Oet1=35g)",6.1,489.0],["Schokokugeln (Denree)",6.0,375.0],["Schokokugeln (Lindt: 1=13g)",4.8,null],["Schokoküsse (1=30g)",3.7,452.0],["Schokolade (Lindt)",5.4,598.0],["Schokolade (Lindt) Käfer 11g",7.2,551.0],["Schokolade (Nikolaus)",6.0,547.0],["Schokolade AdventsK Lindt (1=13g))",7.1,585.0],["Schokolade Aln Kokos",3.8,613.0],["Schokolade Cresta",4.7,636.0],["Schokolade Gubor",6.7,558.0],["Schokolade MetaX (Mini-Schoxxi 1=4g)",1.5,610.0],["Schokolade Mila Kuhflecken",6.1,538.0],["Schokolade Oster \"Schäfchen\" (Rosengarten",2.8,600.0],["Schokolade Rosengarten",6.0,594.0],["Schokolade Schaka Berry (1=13g)",2.5,551.0],["Schokolutscher Rosengarten vegan 1=15g",2.2,596.0],["Schokolutscher Rosengarten Vollmilch 1=15g",6.2,586.0],["Schokolutscher Rosengarten weiß 1=15g",3.7,622.0],["Schokolutscher Rosengarten zartbitter 1=15g",7.6,587.0],["Schokomuffin 030322 (1=50g)",6.59,284.0],["Schokopudding (Happy Coco!)",1.6,177.0],["Schokosoße Mc Sundae (100eingeben)",1.5,null],["Schokostreusel (de Rit)",4.6,473.0],["Schupfnudeln Dinkel Bio",3.3,142.0],["Schupfnudeln Süsskartoffel",3.3,153.0],["Schwarzwurzel",3.0,30.0],["Schweinsohr (1=60g Hammermühle)",2.4,512.0],["Schweinsohr aus Backerei",4.5,434.0],["Sellerie (Knolle)",3.0,35.0],["Selleriesalat",2.81,277.0],["Senf (mittelscharf)",7.8,184.0],["Sesam (Rapunzel)",20.9,600.0],["Smarties mini (1=14g)",6.3,471.0],["Smoothie Drachenfrucht",0.4,55.0],["Smoothie Erdbeere_Banane selbstgemacht",0.69,30.5],["Smoothie Voelkel Erdbeere",0.5,53.0],["Smoothie Voelkel Spinat",0.8,49.0],["Sojasahne",2.7,171.0],["Sonnenblumenkerne",26.5,609.0],["Sourcream McDonald (1=25g)",1.2,466.0],["Soße Curry-Mango (Byodo)",0.8,301.0],["Spaghetti (Hammermühle)",5.5,352.0],["Spargel",2.0,17.5],["Speck",22.0,182.0],["Speck (Schinkenwürfel Ökoland)",22.0,182.0],["Speisestaerke",1.0,348.0],["Spekulatius Schär (1=6,3g)",5.0,463.0],["Spinat",2.8,18.0],["Spinat (Rahm-) Dennree",2.0,45.0],["Spinat (Rahm-) Ökoland",2.5,50.0],["Spinatblätterteigtaschen (1=55g)",4.9,282.0],["Spinatfüllung_161123",2.57,390.0],["Spinatkartoffelgratin",1.58,96.0],["Spinatlasagne (300722)",1.79,78.0],["Spitzkohl",1.7,null],["Spätzle Metax",0.8,195.0],["Spätzle Spinat 2026",1.44,147.0],["Staudensellerie",1.0,15.0],["Streich Michl",2.8,98.0],["SundaeMc_Schokosauce_klein_proPortion((153g)",3.6,188.0],["Süsskartoffelpommes",1.6,139.0],["Süsskartoffelrösti Pahmeyer",3.2,183.0],["Tarte aux poireaux (1=118g)",5.4,null],["Tartelette citron (1=15g)",4.4,417.0],["Teewurst Rügenwalder vegan",2.8,246.0],["Toast (Vollkorn,1=36g))",9.0,255.0],["Toastbrot ungeschnitten HM (1=29g)",0.9,239.0],["Toastscheiben mehrkorn (Schär 1=27g)",4.5,249.0],["Toastscheiben Vital (Schär 1=29g)",4.6,257.0],["Toblerone",5.6,535.0],["Tomaten (stückig)",1.2,26.0],["Tomaten passiert",1.4,31.0],["Tomaten passiert als Suppe (inkl. Zutaten)",1.38,134.0],["Tomatenaufstrich",2.07,197.0],["Tomatenmark",4.5,null],["Tomatenmark (10ml=1geh.TL)",5.9,113.0],["Tomatensauce Basilikum (LaSelva)",1.1,27.0],["Tomatensauce Basilikum (ZW)",1.6,37.0],["Tomatensauce Kinder Aln",1.8,95.0],["Tomatenscheiben (Zwergenwiese, 1=7g))",4.7,251.0],["Tomatensuppe Bio",0.9,72.0],["Tortenguss rot(Biovegan Pckg=ca 7g))",0.8,286.0],["Trauben weiss",0.8,66.4],["Trockenfrüchte Mix (Frankreich)",1.4,414.0],["Vanillekipferl Dinkel (1=6,1g)",7.8,511.0],["Waffel (kürbis 1=90g) Metax",0.8,290.0],["Waffel Schär Schoko (1=35g)",4.9,553.0],["Waffel Zitrone (MetaX, 1=6,25)",0.5,498.0],["Waffel Zitrone (Wanner, 1= ca.8g)",2.9,503.0],["Waffeln (=20,63g,Alnatura Dinkel)",8.0,502.0],["Waffeln (Poensgen) 1=25g",4.6,431.0],["Waffeln Poensgen (1=25g)",4.6,431.0],["Waffeln_Karotten_Metax (270625/1=130g)",1.27,177.0],["Waffelteig (221221)",3.67,245.9],["Waffelteig (Mein Rezept))",6.09,289.0],["Waffelteig ewarm_300523",1.58,253.0],["Wallnüsse",15.0,660.0],["Wanner Snack minis (1=25g)",8.1,526.0],["Wasser",0.0,0.0],["Weizen gepufft mit Honig \"Verival\"",10.0,380.0],["Weizenkörner",11.0,327.0],["Weizenvollkornmehl",11.4,309.0],["Weißenhorn Toskana",3.4,213.0],["Weißkohl",1.5,25.0],["Wienerwürstchen (1=34g)(Loprofin)",5.3,154.0],["Wilder Bernd",23.0,358.0],["Windbeutel (1=12g)",5.1,null],["Wirsing",3.0,25.0],["Wurst Schinkenspicker (1=14gRügenwalder)",2.2,145.0],["Zimtflakes",5.6,378.0],["Zitronenlassi vegan",1.3,79.0],["Zitronentörtchen (1=14g) Bonneterre",4.4,417.0],["Zitronentörtchen (1=60g)",4.9,181.6],["Zucchini-Waffel",1.73,204.0],["Zucchini_Mischung",1.45,138.0],["Zuchini \"U\"",1.5,51.0],["Zuchini (gebraten/0,7=Rohgewicht)",1.5,20.0],["Zuchini-Bratlinge_230626",1.96,83.7],["Zucker",0.0,400.0],["Zuckerstreusel Biovegan",0.5,405.0],["Zwieback (1=10,8g) Schär",3.9,393.0],["Zwiebel",2.0,33.0],["Zwiebelkuchen",3.32,442.3],["Zwiebelringe Funny Frisch",7.0,516.0],["Öl (Olive)",0.0,917.0],["Öl (Raps)",0.0,900.0]],"fav":["Müsli (Früchte Aln.)","Kiwi","Frischkäse Natur","Brot dunkel (VitalSchär1=30g)","Milch & Schoko - Aufstrich","Frischkäse vegan (körnig)","avocado","Reibegenuss (Simply)","Schmand","Trauben weiss","Rote Beete","Tomatensauce Kinder Aln","Cornflakes Tresor","Bohnen (Brech-) grüne Natural CoolDemeter","Apfel","Butterkeks (Schär, 1=8g)","Jogurt griechisch Demeter","Süsskartoffelpommes","Salami Denree (veg. 1=10g)","Loprofin Lyoner"]};
+(function(){
+"use strict";
+
+/* ---------- Hilfen ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = n => (Math.round(n * 10) / 10).toLocaleString("de-DE", {maximumFractionDigits: 1});
+const num = s => { if (typeof s === "number") return s; const v = parseFloat(String(s == null ? "" : s).replace(",", ".")); return isFinite(v) ? v : NaN; };
+const norm = s => String(s).toLowerCase().replace(/ä|ae/g, "a").replace(/ö|oe/g, "o").replace(/ü|ue/g, "u").replace(/ß/g, "ss");
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, "0");
+const keyOf = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const dateOf = k => { const p = k.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+const addDays = (k, n) => { const d = dateOf(k); d.setDate(d.getDate() + n); return keyOf(d); };
+const clone = o => JSON.parse(JSON.stringify(o));
+const WD = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+const MEALS = [
+  {id: "frueh", label: "Frühstück", short: "Frühstück"},
+  {id: "mittag", label: "Mittagessen", short: "Mittag"},
+  {id: "snack", label: "Snack", short: "Snack"},
+  {id: "abend", label: "Abendessen", short: "Abend"}
+];
+const mealLabel = id => (MEALS.find(m => m.id === id) || {}).label || "";
+function defaultMeal(){ const d = new Date(), h = d.getHours() + d.getMinutes() / 60; return h < 10.5 ? "frueh" : h < 14.5 ? "mittag" : h < 17.5 ? "snack" : "abend"; }
+let sheetMeal = null;
+const fmtStk = s => { const w = Math.floor(s), h = s - w >= 0.25 && s - w < 0.75; if (h) return (w ? w : "") + "½"; return String(Math.round(s)); };
+
+function portionOf(name){
+  let m = name.match(/(\d+(?:[.,]\d+)?)\s*g\s*=\s*(\d+)\s*St/i);
+  if (m) { const v = num(m[1]) / parseInt(m[2], 10); if (v > 0 && v < 1000) return Math.round(v * 10) / 10; }
+  m = name.match(/1\s*[A-Za-zÄÖÜäöü]*\s*=\s*(\d+(?:[.,]\d+)?)/);
+  if (m) { const v = num(m[1]); if (v > 0 && v < 1000) return v; }
+  m = name.match(/\((\d+(?:[.,]\d+)?)\s*g\)/i);
+  if (m) { const v = num(m[1]); if (v > 0 && v < 1000) return v; }
+  return null;
+}
+function cleanName(n){
+  const s = String(n).replace(/\d+(?:[.,]\d+)?\s*g\s*=\s*\d+\s*St\w*(?:\s+in\s+\w+)?/gi, "")
+    .replace(/1\s*[A-Za-zÄÖÜäöü]*\s*=\s*\d+(?:[.,]\d+)?\s*g?/g, "")
+    .replace(/(^|[^\d])\d{6}(?!\d)/g, "$1")
+    .replace(/\(\s*\d+(?:[.,]\d+)?\s*g\s*\)/gi, "")
+    .replace(/\(\s*[,;\s]*\)/g, "").replace(/[,;\s]+\)/g, ")").replace(/\(\s*[,;\s]+/g, "(")
+    .replace(/[\s_\-]+$/, "").replace(/\s{2,}/g, " ").trim();
+  return s || String(n);
+}
+const ICONS = [
+  ["kuchen","🍰"],["torte","🍰"],["tortchen","🍰"],["muffin","🧁"],["amerikaner","🍪"],["keks","🍪"],["oreo","🍪"],["cookie","🍪"],["zwieback","🍞"],
+  ["croissant","🥐"],["waffel","🧇"],["pfannkuchen","🥞"],["crepe","🥞"],["popcorn","🍿"],["brezel","🥨"],["chips","🍟"],["pommes","🍟"],
+  ["pingui","🍫"],["riegel","🍫"],["schoko","🍫"],["nutella","🍫"],["aufstrich","🍫"],["gummi","🍬"],["bonbon","🍬"],["magnum","🍦"],["speiseeis","🍦"],
+  ["pudding","🍮"],["panna cotta","🍮"],["mousse","🍮"],["griess","🍮"],
+  ["kiwi","🥝"],["apfelsine","🍊"],["apfel","🍎"],["banane","🍌"],["traube","🍇"],["rosine","🍇"],["mango","🥭"],["birne","🍐"],["erdbeer","🍓"],
+  ["himbeer","🫐"],["heidelbeer","🫐"],["blaubeer","🫐"],["beere","🫐"],["kirsch","🍒"],["pfirsich","🍑"],["aprikose","🍑"],["nektarine","🍑"],
+  ["melone","🍉"],["orange","🍊"],["mandarine","🍊"],["clementine","🍊"],["zitron","🍋"],["ananas","🍍"],["kokos","🥥"],["avocado","🥑"],
+  ["dattel","🌴"],["pflaume","🫐"],["mirabelle","🫐"],["feige","🫐"],
+  ["tomatensauce","🥫"],["sauce","🥫"],["sosse","🥫"],["ketchup","🥫"],["ajvar","🥫"],["suppe","🍲"],["eintopf","🍲"],
+  ["tomate","🍅"],["karotte","🥕"],["mohre","🥕"],["gurke","🥒"],["zucchini","🥒"],["zuchini","🥒"],["paprika","🫑"],["mais","🌽"],
+  ["kartoffel","🥔"],["brokkoli","🥦"],["broccoli","🥦"],["blumenkohl","🥦"],["salat","🥬"],["spinat","🥬"],["kohl","🥬"],["bohne","🫛"],["erbse","🫛"],
+  ["zwiebel","🧅"],["knoblauch","🧄"],["pilz","🍄"],["champignon","🍄"],["aubergine","🍆"],["kurbis","🎃"],["rote beete","🥗"],
+  ["nudel","🍝"],["spatzle","🍝"],["gnocchi","🍝"],["schupfnudel","🍝"],["spaghetti","🍝"],["pasta","🍝"],["pizza","🍕"],["reis","🍚"],
+  ["musli","🥣"],["cornflakes","🥣"],["flakes","🥣"],["porridge","🥣"],["haferflocken","🥣"],
+  ["frischkase","🧀"],["kase","🧀"],["reibegenuss","🧀"],["babybel","🧀"],["mozzarella","🧀"],
+  ["lyoner","🌭"],["wurst","🌭"],["salami","🌭"],["metzger","🌭"],
+  ["jogurt","🥛"],["joghurt","🥛"],["jogi","🥛"],["milch","🥛"],["sahne","🥛"],["schmand","🥛"],["quark","🥛"],["lassi","🥛"],
+  ["nuss","🥜"],["nusse","🥜"],["mandel","🥜"],
+  ["saft","🧃"],["honig","🍯"],["sirup","🍯"],["marmelade","🍯"],["konfiture","🍯"],
+  ["brotchen","🥖"],["baguette","🥖"],["brot","🍞"],["toast","🍞"],["bratling","🍘"],["puffer","🥔"]
+].map(e => [norm(e[0]), e[1]]);
+function iconFor(name){ const n = norm(name); for (const e of ICONS) if (n.includes(e[0])) return e[1]; return "🍽️"; }
+
+/* ---------- Zustand ---------- */
+const BUILTIN = (DATA && DATA.foods || []).map(f => ({name: f[0], p: f[1], k: f[2], src: "ref"}));
+const DEFAULT_FAV = DATA && DATA.fav || [];
+const state = {
+  readOnly: false,
+  days: {},
+  foodRows: {},          // Zeilen aus eiweiss_lebensmittel: eigene Lebensmittel, geänderte Werte, Stückgewichte
+  settings: {ziel: 25},
+  cur: keyOf(new Date()),
+  today: keyOf(new Date()),
+  email: ""
+};
+let sb = null, channel = null, foodsCache = null;
+const fmt2 = n => (Math.round(n * 100) / 100).toLocaleString("de-DE", {maximumFractionDigits: 2});
+
+function foodIndex(){
+  if (foodsCache) return foodsCache;
+  const byName = new Map();
+  BUILTIN.forEach(f => byName.set(f.name, Object.assign({}, f)));
+  Object.values(state.foodRows).forEach(r => {
+    if (!r || !r.name) return;
+    if (r.ausgeblendet) { byName.delete(r.name); return; }
+    const base = byName.get(r.name);
+    if (base) {
+      if (r.p != null && num(r.p) >= 0) base.p = num(r.p);
+      if (r.k != null && num(r.k) >= 0) base.k = num(r.k);
+    } else if (r.p != null && num(r.p) >= 0) {
+      byName.set(r.name, {name: r.name, p: num(r.p), k: r.k == null ? NaN : num(r.k), src: "own"});
+    }
+  });
+  foodsCache = {list: [...byName.values()], map: byName};
+  return foodsCache;
+}
+function allFoods(){ return foodIndex().list; }
+function findFood(name){ return foodIndex().map.get(name) || null; }
+function portionFor(food){ const r = state.foodRows[food.name]; const p = r && r.stueck != null ? num(r.stueck) : NaN; return p > 0 ? p : (portionOf(food.name) || null); }
+function zielOf(k){ const d = state.days[k]; return d && num(d.ziel) > 0 ? num(d.ziel) : (state.settings.ziel || 25); }
+function totals(k){
+  const d = state.days[k]; let e = 0, kc = 0;
+  (d && d.items || []).forEach(it => { e += num(it.eiweiss) || 0; kc += num(it.kcal) || 0; });
+  return {e, kc};
+}
+function level(e, z){ if (e > z + 0.05) return "over"; if (e >= 0.8 * z) return "near"; return "ok"; }
+function history(){
+  const freq = {}, last = {}, byMeal = {};
+  Object.keys(state.days).sort().forEach(k => {
+    const items = (state.days[k].items || []).slice().sort((a, b) => (a.t || 0) - (b.t || 0));
+    items.forEach(it => {
+      if (it.manual) return;
+      freq[it.name] = (freq[it.name] || 0) + 1;
+      last[it.name] = {g: num(it.g), stk: num(it.stk) || null};
+      if (it.meal) { byMeal[it.meal] = byMeal[it.meal] || {}; byMeal[it.meal][it.name] = (byMeal[it.meal][it.name] || 0) + 1; }
+    });
+  });
+  return {freq, last, byMeal};
+}
+/* Häufig gegessen, passend zur Mahlzeit zuerst */
+function favorites(h, meal){
+  h = h || history();
+  const score = {}, bm = (meal && h.byMeal[meal]) || {};
+  Object.keys(h.freq).forEach(n => score[n] = h.freq[n] * 10 + (bm[n] || 0) * 25);
+  DEFAULT_FAV.forEach((n, i) => score[n] = (score[n] || 0) + (DEFAULT_FAV.length - i) / DEFAULT_FAV.length);
+  return Object.keys(score).sort((a, b) => score[b] - score[a]).map(findFood).filter(Boolean).slice(0, 12);
+}
+/* Standardmenge für ein Lebensmittel: Stück, wenn bekannt, sonst die letzte Grammzahl */
+function defaultAmount(food, h){
+  const portion = portionFor(food), last = (h || history()).last[food.name];
+  if (portion) {
+    let stk = last && last.stk ? last.stk : (last && last.g ? Math.round(last.g / portion * 2) / 2 : 1);
+    if (!(stk >= 0.5)) stk = 1;
+    return {mode: "stk", stk, portion, g: stk * portion, last};
+  }
+  return {mode: "g", g: last && last.g > 0 ? last.g : 100, portion: null, last};
+}
+function amountText(a){ return a.mode === "stk" ? fmtStk(a.stk) + " Stück" : fmt(a.g) + " g"; }
+
+/* ---------- Speichern (Supabase) ---------- */
+const SB_URL = "https://fqhbjtudenacdsrqwdcl.supabase.co";
+const SB_KEY = "sb_publishable_6rn_pwfxv00TGt828ToZjg_kAvhPZsI";
+const CACHE = "eiweiss-cache-v1";
+function cacheSave(){ try { localStorage.setItem(CACHE, JSON.stringify({days: state.days, foodRows: state.foodRows, settings: state.settings})); } catch (e) {} }
+function cacheLoad(){
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE) || "null");
+    if (c) { state.days = c.days || {}; state.foodRows = c.foodRows || {}; state.settings = Object.assign({ziel: 25}, c.settings || {}); foodsCache = null; return true; }
+  } catch (e) {}
+  return false;
+}
+function cacheClear(){ try { localStorage.removeItem(CACHE); } catch (e) {} }
+
+function fail(err, msg){
+  try { console.warn(err); } catch (e) {}
+  const m = String(err && err.message || "");
+  if (/JWT|session|auth/i.test(m)) { toast("Bitte neu anmelden."); return; }
+  if (/row-level security|permission/i.test(m)) { toast("Keine Berechtigung zum Speichern."); return; }
+  toast(msg || "Speichern hat nicht geklappt. Bitte Internet prüfen.");
+}
+const nOrNull = v => v == null || v === "" ? null : num(v);
+function rowToItem(r){
+  return {id: r.id, name: r.name, g: nOrNull(r.g), stk: nOrNull(r.stk), p100: nOrNull(r.p100), k100: nOrNull(r.k100),
+          eiweiss: num(r.eiweiss) || 0, kcal: num(r.kcal) || 0, meal: r.mahlzeit || null, manual: !!r.manuell, t: num(r.t) || 0, by: r.erstellt_von || ""};
+}
+function itemToRow(k, it){
+  return {id: it.id, datum: k, name: it.name, g: it.g == null ? null : it.g, stk: it.stk || null, p100: it.p100 == null ? null : it.p100,
+          k100: it.k100 == null || !isFinite(it.k100) ? null : it.k100, eiweiss: it.eiweiss || 0, kcal: it.kcal || 0,
+          mahlzeit: it.meal || null, manuell: !!it.manual, t: it.t || Date.now()};
+}
+
+/* ---------- Änderungen ---------- */
+function ensureDay(k){ return state.days[k] || (state.days[k] = {date: k, ziel: null, items: []}); }
+function dropItem(id){
+  let found = null;
+  Object.keys(state.days).forEach(d => { const ds = state.days[d], i = ds.items.findIndex(x => x.id === id); if (i >= 0) found = ds.items.splice(i, 1)[0]; });
+  return found;
+}
+function placeItem(k, it){ dropItem(it.id); ensureDay(k).items.push(it); }
+async function addItem(k, item){
+  placeItem(k, item); render(); cacheSave();
+  const { error } = await sb.from("eiweiss_eintraege").insert(itemToRow(k, item));
+  if (error) { dropItem(item.id); render(); cacheSave(); fail(error); }
+}
+async function updateItem(k, id, patch){
+  const d = ensureDay(k), i = d.items.findIndex(x => x.id === id); if (i < 0) return;
+  const before = d.items[i];
+  d.items[i] = Object.assign({}, before, patch); render(); cacheSave();
+  const row = itemToRow(k, d.items[i]); delete row.id; delete row.datum; delete row.t;
+  const { error } = await sb.from("eiweiss_eintraege").update(row).eq("id", id);
+  if (error) { placeItem(k, before); render(); cacheSave(); fail(error); }
+}
+async function removeItem(k, id){
+  const it = dropItem(id); if (!it) return;
+  render(); cacheSave();
+  const { error } = await sb.from("eiweiss_eintraege").delete().eq("id", id);
+  if (error) { placeItem(k, it); render(); fail(error); return; }
+  toast(cleanName(it.name) + " gelöscht", () => addItem(k, it));
+}
+function itemFields(food, g, stk){
+  return {g, stk: stk || null, p100: food.p, k100: isFinite(food.k) ? food.k : null,
+          eiweiss: Math.round(g * food.p) / 100, kcal: isFinite(food.k) ? Math.round(g * food.k) / 100 : 0};
+}
+async function saveDayZiel(k, v){
+  ensureDay(k).ziel = v; render(); cacheSave();
+  const { error } = await sb.from("eiweiss_tage").upsert({datum: k, ziel: v});
+  if (error) fail(error);
+}
+async function saveSettingZiel(v){
+  state.settings = Object.assign({}, state.settings, {ziel: v}); render(); cacheSave();
+  const { error } = await sb.from("eiweiss_einstellungen").upsert({schluessel: "ziel", wert: v});
+  if (error) fail(error);
+}
+async function saveFoodRow(row){
+  const prev = state.foodRows[row.name];
+  state.foodRows = Object.assign({}, state.foodRows, {[row.name]: Object.assign({eigen: false, ausgeblendet: false}, prev || {}, row)});
+  foodsCache = null; render(); cacheSave();
+  const { error } = await sb.from("eiweiss_lebensmittel").upsert(row);
+  if (error) {
+    const fr = Object.assign({}, state.foodRows); if (prev) fr[row.name] = prev; else delete fr[row.name];
+    state.foodRows = fr; foodsCache = null; render(); cacheSave(); fail(error);
+  }
+}
+
+/* ---------- Anzeige ---------- */
+function dayLabel(k){
+  const today = keyOf(new Date());
+  if (k === today) return "Heute";
+  if (k === addDays(today, -1)) return "Gestern";
+  return WD[dateOf(k).getDay()] + ", " + dateOf(k).toLocaleDateString("de-DE", {day: "numeric", month: "long"});
+}
+function statusText(e, z){
+  const lv = level(e, z);
+  if (lv === "over") return fmt(e - z) + " g zu viel";
+  if (z - e < 0.05) return "Grenze erreicht";
+  return "Noch " + fmt(z - e) + " g frei";
+}
+function render(){
+  const k = state.cur, today = keyOf(new Date());
+  const z = zielOf(k), t = totals(k), lv = level(t.e, z), h = history();
+  $("app").classList.toggle("ro", state.readOnly);
+  const lbl = dayLabel(k);
+  $("dayTitle").innerHTML = esc(lbl === "Heute" || lbl === "Gestern" ? lbl : WD[dateOf(k).getDay()] + "., " + dateOf(k).getDate() + ".") +
+    "<small>" + esc(dateOf(k).toLocaleDateString("de-DE", {weekday: "long", day: "numeric", month: "long"})) + "</small>";
+  $("next").disabled = k >= today;
+  $("listTitle").textContent = lbl === "Heute" ? "Heute gegessen" : lbl === "Gestern" ? "Gestern gegessen" : "Gegessen am " + dateOf(k).toLocaleDateString("de-DE", {day: "numeric", month: "long"});
+
+  $("ringBar").setAttribute("stroke-dashoffset", String(326.7 * (1 - (z > 0 ? Math.min(t.e / z, 1) : 0))));
+  $("ring").className = "ring " + lv;
+  $("total").innerHTML = esc(fmt(t.e)) + '<span class="unit"> g</span>';
+  $("zielBtn").textContent = "Grenze " + fmt(z) + " g";
+  $("status").className = "status " + lv;
+  $("status").textContent = statusText(t.e, z);
+  $("kcal").textContent = Math.round(t.kc).toLocaleString("de-DE") + " kcal";
+
+  const end = addDays(k, 3) > today ? today : addDays(k, 3);
+  const vals = []; for (let i = 6; i >= 0; i--) { const x = addDays(end, -i); vals.push({k: x, e: totals(x).e, z: zielOf(x)}); }
+  const top = Math.max(...vals.map(v => Math.max(v.e, v.z * 1.25)), 1);
+  $("week").innerHTML = vals.map(v =>
+    '<button class="wd' + (v.k === k ? " cur" : "") + '" data-day="' + v.k + '" aria-label="' + esc(dayLabel(v.k) + ": " + fmt(v.e) + " g") + '">' +
+    '<div class="col"><div class="fill ' + level(v.e, v.z) + '" style="height:' + Math.round(v.e / top * 100) + '%"></div><div class="zl" style="bottom:' + Math.round(v.z / top * 100) + '%"></div></div>' +
+    WD[dateOf(v.k).getDay()] + "</button>").join("");
+
+  $("favs").innerHTML = favorites(h, defaultMeal()).map(f => {
+    const a = defaultAmount(f, h);
+    return '<button class="tile" data-food="' + esc(f.name) + '"><span class="ic" aria-hidden="true">' + iconFor(f.name) + "</span><b>" + esc(cleanName(f.name)) +
+      "</b><small>" + esc(amountText(a)) + " = " + esc(fmt(a.g * f.p / 100)) + " g Eiweiß</small></button>";
+  }).join("");
+
+  const items = ((state.days[k] && state.days[k].items) || []).slice().sort((a, b) => (a.t || 0) - (b.t || 0));
+  const rowHtml = it =>
+    '<button class="row" data-item="' + esc(it.id) + '"><span class="ic" aria-hidden="true">' + iconFor(it.name) + '</span><div class="n"><b>' + esc(cleanName(it.name)) + "</b><small>" +
+    (it.manual ? "direkt eingetragen" : it.stk ? esc(fmtStk(it.stk)) + " Stück" : esc(fmt(it.g)) + " g") + '</small></div><div class="v">' + esc(fmt(it.eiweiss)) + " g</div></button>";
+  const groups = MEALS.map(m => ({id: m.id, label: m.label, items: items.filter(it => it.meal === m.id)}));
+  const rest = items.filter(it => !MEALS.some(m => m.id === it.meal));
+  let mh = groups.map(g => {
+    const sum = g.items.reduce((s, it) => s + (num(it.eiweiss) || 0), 0);
+    return '<div class="meal"><div class="mhead"><h3>' + esc(g.label) + "</h3>" + (g.items.length ? "<span>" + esc(fmt(sum)) + " g</span>" : "") + "</div>" +
+      g.items.map(rowHtml).join("") +
+      '<button class="madd" data-addmeal="' + g.id + '">+ ' + (g.items.length ? "Mehr zum " : "") + esc(g.label) + (g.items.length ? "" : " eintragen") + "</button></div>";
+  }).join("");
+  if (rest.length) {
+    const sum = rest.reduce((s, it) => s + (num(it.eiweiss) || 0), 0);
+    mh += '<div class="meal none"><div class="mhead"><h3>Ohne Mahlzeit</h3><span>' + esc(fmt(sum)) + " g</span></div>" + rest.map(rowHtml).join("") + "</div>";
+  }
+  $("meals").innerHTML = mh;
+
+  $("foot").innerHTML = state.email ? "Angemeldet als " + esc(state.email) + ' · <button class="linkbtn" id="kontoBtn">Konto</button>' : "";
+  if (isOv() && $("ovView") && !$("ovView").hidden) renderOverview();
+}
+
+/* ---------- Übersicht ---------- */
+let ovRange = 30, ovSel = null, ovAllFoods = false, ovKeys = [];
+const isOv = () => location.hash === "#uebersicht";
+const hasItems = k => !!(state.days[k] && (state.days[k].items || []).length);
+const shortDate = k => { const d = dateOf(k); return WD[d.getDay()] + ", " + d.getDate() + "." + (d.getMonth() + 1) + "."; };
+function kpi(label, value, sub, flag){
+  return '<div class="kpi' + (flag ? " flag" : "") + '"><small>' + esc(label) + "</small><b>" + esc(value) + "</b><small>" + esc(sub) + "</small></div>";
+}
+function barPath(x, y, w, h, r){
+  return "M" + x + "," + (y + h) + "V" + (y + r) + "Q" + x + "," + y + " " + (x + r) + "," + y + "H" + (x + w - r) + "Q" + (x + w) + "," + y + " " + (x + w) + "," + (y + r) + "V" + (y + h) + "Z";
+}
+function chartSvg(keys){
+  const W = 340, H = 186, L = 26, R = 4, T = 8, B = 22, pw = W - L - R, ph = H - T - B;
+  const vals = keys.map(k => ({k, e: totals(k).e, z: zielOf(k), has: hasItems(k)}));
+  const zl = state.settings.ziel || 25;
+  const ymax = Math.max(10, Math.ceil(Math.max(zl * 1.2, ...vals.map(v => v.e)) / 10) * 10);
+  const y = v => +(T + ph - v / ymax * ph).toFixed(1);
+  const band = pw / keys.length, bw = Math.max(2, band - 2);
+  let s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Eiweiß pro Tag im gewählten Zeitraum">';
+  for (let g = 0; g <= ymax; g += 10) s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"></line><text x="' + (L - 6) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + g + "</text>";
+  vals.forEach((v, i) => {
+    if (!v.has || !(v.e > 0)) return;
+    const x = +(L + i * band + (band - bw) / 2).toFixed(1), top = y(v.e), hgt = +(T + ph - top).toFixed(1), r = Math.min(4, bw / 2, hgt);
+    const d = barPath(x, top, +bw.toFixed(1), hgt, r);
+    s += '<path class="b-' + level(v.e, v.z) + '" d="' + d + '"></path>';
+    if (v.k === ovSel) s += '<path class="sel" d="' + d + '"></path>';
+  });
+  s += '<line class="lim" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(zl) + '" y2="' + y(zl) + '"></line>';
+  const step = keys.length <= 7 ? 1 : keys.length <= 31 ? 7 : 14;
+  keys.forEach((k, i) => {
+    if ((keys.length - 1 - i) % step) return;
+    const d = dateOf(k), cx = L + i * band + band / 2;
+    const anchor = cx > W - 18 ? "end" : cx < L + 14 ? "start" : "middle";
+    s += '<text x="' + (anchor === "end" ? W - R : anchor === "start" ? L : cx.toFixed(1)) + '" y="' + (H - 6) + '" text-anchor="' + anchor + '">' +
+      (keys.length <= 7 ? WD[d.getDay()] : d.getDate() + "." + (d.getMonth() + 1) + ".") + "</text>";
+  });
+  vals.forEach((v, i) => {
+    s += '<rect class="hit" data-ovday="' + v.k + '" x="' + (L + i * band).toFixed(1) + '" y="' + T + '" width="' + band.toFixed(1) + '" height="' + (ph + B) + '"><title>' +
+      esc(shortDate(v.k) + ": " + (v.has ? fmt(v.e) + " g" : "nichts eingetragen")) + "</title></rect>";
+  });
+  return s + "</svg>";
+}
+function pickHtml(){
+  if (!ovSel) return '<span class="hint" style="text-align:left">Tippe auf einen Balken, um den Tag zu sehen.</span>';
+  const t = totals(ovSel);
+  return "<span>" + esc(shortDate(ovSel)) + ": " + (hasItems(ovSel) ? esc(fmt(t.e)) + " g Eiweiß" : "nichts eingetragen") + "</span>" +
+    (hasItems(ovSel) ? '<button class="golink" data-openday="' + ovSel + '">Tag öffnen ›</button>' : "");
+}
+function selectOvDay(k){
+  if (k === ovSel || !$("ovChart")) return;
+  ovSel = k;
+  $("ovChart").innerHTML = chartSvg(ovKeys);
+  $("ovPick").innerHTML = pickHtml();
+}
+function renderOverview(){
+  const today = keyOf(new Date()), from = addDays(today, -(ovRange - 1));
+  document.querySelectorAll("[data-range]").forEach(b => { const on = +b.dataset.range === ovRange; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); });
+  const fmtD = k => dateOf(k).toLocaleDateString("de-DE", {day: "numeric", month: "short"});
+  $("ovSub").textContent = fmtD(from) + " – " + fmtD(today);
+  ovKeys = []; for (let k = from; k <= today; k = addDays(k, 1)) ovKeys.push(k);
+  const days = ovKeys.filter(hasItems);
+  if (!days.length) { $("ovBody").innerHTML = '<div class="card empty">Keine Einträge in diesem Zeitraum.</div>'; return; }
+
+  const per = days.map(k => { const t = totals(k); return {k, e: t.e, kc: t.kc, z: zielOf(k)}; });
+  const sumE = per.reduce((s, d) => s + d.e, 0), sumK = per.reduce((s, d) => s + d.kc, 0);
+  const overN = per.filter(d => level(d.e, d.z) === "over").length;
+  const top = per.reduce((a, b) => b.e > a.e ? b : a);
+  const tage = n => n + (n === 1 ? " Tag" : " Tage");
+  const tagen = n => n + (n === 1 ? " Tag" : " Tagen");
+  let h = '<div class="kpis">' +
+    kpi("Ø pro Tag", fmt(sumE / per.length) + " g", "an " + tagen(per.length) + " mit Einträgen") +
+    kpi("Über der Grenze", tage(overN), "von " + per.length, overN > 0) +
+    kpi("Höchster Tag", fmt(top.e) + " g", shortDate(top.k)) +
+    kpi("Ø kcal pro Tag", Math.round(sumK / per.length).toLocaleString("de-DE"), "soweit bekannt") + "</div>";
+
+  h += '<div class="card"><h2>Eiweiß pro Tag</h2><div class="chart" id="ovChart">' + chartSvg(ovKeys) + '</div><p class="pick" id="ovPick">' + pickHtml() + "</p>" +
+    '<div class="legend"><span><i style="background:var(--ok)"></i>unter der Grenze</span><span><i style="background:var(--near)"></i>knapp darunter</span><span><i style="background:var(--over)"></i>drüber</span>' +
+    '<span><i style="background:none;border-top:2px dashed var(--ink);height:0;border-radius:0;vertical-align:4px"></i>Grenze ' + esc(fmt(state.settings.ziel || 25)) + " g</span></div></div>";
+
+  // Woher kommt das Eiweiß?
+  const agg = {};
+  days.forEach(k => state.days[k].items.forEach(it => {
+    const a = agg[it.name] || (agg[it.name] = {name: it.name, n: 0, e: 0, g: 0, gn: 0, manual: !!it.manual});
+    a.n++; a.e += num(it.eiweiss) || 0;
+    if (num(it.g) > 0) { a.g += num(it.g); a.gn++; }
+  }));
+  const foods = Object.values(agg).sort((a, b) => b.e - a.e);
+  const maxF = foods[0].e || 1;
+  h += '<h2>Woher kommt das Eiweiß?</h2><div class="list">' + (ovAllFoods ? foods : foods.slice(0, 10)).map(f =>
+    '<div class="frow"><span class="ic" aria-hidden="true">' + (f.manual ? "✏️" : iconFor(f.name)) + '</span><div class="n"><b>' + esc(cleanName(f.name)) + "</b>" +
+    '<div class="fbar"><i style="width:' + Math.max(2, Math.round(f.e / maxF * 100)) + '%"></i></div><small>' + f.n + "× gegessen" + (f.gn ? " · Ø " + esc(fmt(f.g / f.gn)) + " g" : "") + "</small></div>" +
+    '<div class="v">' + esc(fmt(f.e)) + " g<small>" + Math.round(f.e / sumE * 100) + " %</small></div></div>"
+  ).join("") + (foods.length > 10 ? '<button class="morebtn" id="ovMore">' + (ovAllFoods ? "Weniger anzeigen" : "Alle " + foods.length + " anzeigen") + "</button>" : "") + "</div>";
+
+  // Nach Mahlzeit
+  const mealDays = days.filter(k => state.days[k].items.some(it => it.meal));
+  h += "<h2>Nach Mahlzeit</h2>";
+  if (!mealDays.length) {
+    h += '<div class="card"><p class="hint" style="text-align:left">Noch keine Mahlzeiten zugeordnet. Die Aufteilung erscheint, sobald Einträge bei Frühstück, Mittag, Snack oder Abend stehen.</p></div>';
+  } else {
+    const ms = MEALS.map(m => ({m, e: mealDays.reduce((s, k) => s + state.days[k].items.filter(it => it.meal === m.id).reduce((a, it) => a + (num(it.eiweiss) || 0), 0), 0)}));
+    const tot = ms.reduce((s, x) => s + x.e, 0) || 1, maxM = Math.max(...ms.map(x => x.e)) || 1;
+    h += '<div class="list">' + ms.map(x =>
+      '<div class="frow"><div class="n"><b>' + esc(x.m.label) + '</b><div class="fbar"><i style="width:' + Math.max(2, Math.round(x.e / maxM * 100)) + '%"></i></div><small>Ø ' +
+      esc(fmt(x.e / mealDays.length)) + " g pro Tag</small></div><div class=\"v\">" + Math.round(x.e / tot * 100) + " %</div></div>"
+    ).join("") + "</div>" + '<p class="hint" style="text-align:left">Gezählt an ' + tagen(mealDays.length) + " mit Mahlzeiten.</p>";
+  }
+
+  // Alle Tage
+  h += '<h2>Alle Tage</h2><div class="list">' + days.slice().reverse().map(k => {
+    const its = state.days[k].items.slice().sort((a, b) => (a.t || 0) - (b.t || 0)).map(it => cleanName(it.name));
+    const t = totals(k), z = zielOf(k);
+    const nm = its.slice(0, 6).join(", ") + (its.length > 6 ? " und " + (its.length - 6) + " weitere" : "");
+    return '<button class="drow" data-openday="' + k + '"><div class="n"><b>' + esc(shortDate(k)) + "</b><small>" + esc(nm) + '</small></div><div class="v">' + esc(fmt(t.e)) + " g" +
+      (level(t.e, z) === "over" ? "<small>▲ " + esc(fmt(t.e - z)) + " g zu viel</small>" : "") + "</div></button>";
+  }).join("") + "</div>";
+
+  $("ovBody").innerHTML = h;
+}
+function showView(){
+  if (!state.email) return;
+  $("loginView").hidden = true;
+  const ov = isOv();
+  $("app").hidden = ov; $("ovView").hidden = !ov;
+  if (ov) { ovSel = null; renderOverview(); } else render();
+  try { window.scrollTo(0, 0); } catch (e) {}
+}
+window.addEventListener("hashchange", showView);
+
+/* ---------- Blatt ---------- */
+let sheetMode = null;
+function openSheet(title, html, opts){
+  opts = opts || {};
+  $("sheetTitle").textContent = title;
+  $("sheetIcon").textContent = opts.icon || "";
+  $("sheetBody").innerHTML = html;
+  $("panel").classList.toggle("short", !!opts.short);
+  $("sheet").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeSheet(){ $("sheet").classList.remove("open"); document.body.style.overflow = ""; sheetMode = null; sheetMeal = null; }
+function mealSeg(){
+  return '<div class="seg" role="radiogroup" aria-label="Mahlzeit">' + MEALS.map(m =>
+    '<button class="segb' + (sheetMeal === m.id ? " on" : "") + '" data-meal="' + m.id + '" role="radio" aria-checked="' + (sheetMeal === m.id) + '">' + esc(m.short) + "</button>").join("") + "</div>";
+}
+
+function openAdd(meal){
+  if (state.readOnly) return;
+  sheetMode = "add";
+  sheetMeal = meal || defaultMeal();
+  openSheet(meal ? mealLabel(meal) + ": Essen suchen" : "Essen suchen",
+    '<input class="search" id="q" type="search" placeholder="Tippe z. B. Kiwi" autocomplete="off" enterkeyhint="search" aria-label="Essen suchen">' +
+    '<div id="results"></div>' +
+    '<div class="links"><button class="ghost" id="goManual">Eiweiß direkt eintragen</button><button class="ghost" id="goNew">Neues Lebensmittel</button></div>');
+  $("q").addEventListener("input", () => showResults($("q").value));
+  showResults("");
+  setTimeout(() => { try { $("q").focus(); } catch (e) {} }, 250);
+}
+function showResults(query){
+  const box = $("results"); if (!box) return;
+  const words = norm(query.trim()).split(/\s+/).filter(Boolean);
+  const h = history();
+  if (!words.length) { box.innerHTML = resHtml(favorites(h, sheetMeal)); return; }
+  const list = allFoods().filter(f => { const n = norm(f.name); return words.every(w => n.includes(w)); });
+  list.sort((a, b) => {
+    const as = norm(a.name).startsWith(words[0]) ? 1 : 0, bs = norm(b.name).startsWith(words[0]) ? 1 : 0;
+    if (as !== bs) return bs - as;
+    const af = h.freq[a.name] || 0, bf = h.freq[b.name] || 0;
+    if (af !== bf) return bf - af;
+    return a.name.localeCompare(b.name, "de");
+  });
+  box.innerHTML = list.length ? resHtml(list.slice(0, 50)) : '<p class="hint">Nichts gefunden. Probier ein anderes Wort oder lege es unten neu an.</p>';
+}
+function resHtml(list){
+  return '<div class="res">' + list.map(f =>
+    '<button class="row" data-food="' + esc(f.name) + '"><span class="ic" aria-hidden="true">' + iconFor(f.name) + '</span><div class="n"><b>' + esc(cleanName(f.name)) + "</b><small>" +
+    (cleanName(f.name) !== f.name ? esc(f.name) + " · " : "") + esc(fmt(f.p)) + " g Eiweiß in 100 g" + (f.src === "own" ? " · selbst angelegt" : "") + '</small></div><div class="v">›</div></button>'
+  ).join("") + "</div>";
+}
+
+/* Menge wählen: zuerst in Stück, nur wenn nötig in Gramm */
+let amt = null;
+function openAmount(food, editItem){
+  if (state.readOnly) return;
+  const a = defaultAmount(food);
+  amt = {food, mode: a.mode, stk: a.stk || 1, g: a.g, portion: a.portion, last: a.last, editId: null};
+  if (!sheetMeal) sheetMeal = defaultMeal();
+  if (editItem) {
+    amt.editId = editItem.id;
+    sheetMeal = editItem.meal || null;
+    if (editItem.stk && amt.portion) { amt.mode = "stk"; amt.stk = num(editItem.stk); }
+    else { amt.mode = "g"; amt.g = num(editItem.g) || 100; }
+  }
+  drawAmount();
+}
+function grams(){ return amt.mode === "stk" ? amt.stk * amt.portion : Math.max(0, amt.g || 0); }
+function drawAmount(){
+  sheetMode = "amount";
+  const f = amt.food, edit = !!amt.editId;
+  let html = mealSeg();
+  if (amt.mode === "stk") {
+    html += '<p class="qlabel">Wie viele Stück?</p>' +
+      '<div class="amount"><button class="step" id="minus" aria-label="Weniger">−</button><output id="stkOut" aria-live="polite"></output><button class="step" id="plus" aria-label="Mehr">+</button></div>' +
+      '<p class="sub">1 Stück = ' + esc(fmt(amt.portion)) + " g</p>" +
+      '<div class="chips">' + [0.5, 1, 2, 3].map(s => '<button class="chip" data-stk="' + s + '">' + fmtStk(s) + "</button>").join("") + "</div>";
+  } else {
+    const chips = [];
+    if (amt.last && amt.last.g > 0) chips.push([amt.last.g, "Wie letztes Mal · " + fmt(amt.last.g) + " g"]);
+    [25, 50, 100, 150, 200].forEach(v => { if (!chips.some(c => Math.abs(c[0] - v) < 0.01)) chips.push([v, v + " g"]); });
+    html += '<p class="qlabel">Wie viel Gramm?</p>' +
+      '<div class="amount"><button class="step" id="minus" aria-label="10 Gramm weniger">−</button><input id="g" inputmode="decimal" enterkeyhint="done" aria-label="Gramm"><button class="step" id="plus" aria-label="10 Gramm mehr">+</button></div>' +
+      '<p class="sub">Tipp: Teller auf die Waage stellen</p>' +
+      '<div class="chips">' + chips.map(c => '<button class="chip" data-g="' + c[0] + '">' + esc(c[1]) + "</button>").join("") + "</div>";
+  }
+  html += '<div class="result" id="calc"></div>' +
+    '<button class="primary" id="save">' + (edit ? "Ändern" : "Eintragen") + "</button>";
+  if (amt.mode === "stk") html += '<button class="textbtn" id="toG">Lieber in Gramm eingeben</button>';
+  else html += (amt.portion ? '<button class="textbtn" id="toStk">In Stück eingeben</button>' : '<button class="textbtn" id="setPortion">Gibt es das in Stücken?</button>') +
+    '<div class="box" id="portionBox" hidden><label for="pv">Wie viel wiegt 1 Stück? (Gramm)<input class="field" id="pv" inputmode="decimal" placeholder="z. B. 80"></label><button class="ghost" id="pSave">Speichern</button></div>';
+  html += '<button class="textbtn" id="editFood">Werte von diesem Lebensmittel ändern</button>';
+  if (edit) html += '<button class="danger" id="del">Löschen</button>';
+  openSheet(cleanName(f.name), html, {icon: iconFor(f.name)});
+  if (amt.mode === "g") {
+    $("g").value = fmt(amt.g);
+    $("g").addEventListener("input", () => { const v = num($("g").value); amt.g = isFinite(v) ? v : 0; calcAmount(true); });
+  }
+  calcAmount();
+}
+function calcAmount(fromInput){
+  const g = grams();
+  if (amt.mode === "stk") $("stkOut").textContent = fmtStk(amt.stk);
+  else if (!fromInput) $("g").value = fmt(g);
+  const e = g * amt.food.p / 100;
+  const k = state.cur, z = zielOf(k);
+  let base = totals(k).e;
+  if (amt.editId) { const it = ((state.days[k] || {}).items || []).find(x => x.id === amt.editId); if (it) base -= num(it.eiweiss) || 0; }
+  const after = base + e, lv = level(after, z);
+  $("calc").className = "result " + lv;
+  $("calc").innerHTML = "<b>" + esc(fmt(e)) + " g Eiweiß</b><span>" +
+    (lv === "over" ? "Danach " + esc(fmt(after - z)) + " g zu viel" : z - after < 0.05 ? "Danach ist die Grenze erreicht" : "Danach noch " + esc(fmt(z - after)) + " g frei") + "</span>";
+  document.querySelectorAll(".chip").forEach(c => {
+    const on = amt.mode === "stk" ? Math.abs(num(c.dataset.stk) - amt.stk) < 0.01 : Math.abs(num(c.dataset.g) - g) < 0.01;
+    c.classList.toggle("on", on);
+  });
+}
+function stepAmount(dir){
+  if (amt.mode === "stk") {
+    if (dir > 0) amt.stk = amt.stk < 1 ? 1 : amt.stk + 1;
+    else amt.stk = amt.stk > 1 ? amt.stk - 1 : 0.5;
+  } else amt.g = Math.max(0, Math.round((amt.g || 0) + dir * 10));
+  calcAmount();
+}
+function saveAmount(){
+  const g = Math.round(grams() * 10) / 10;
+  if (!(g > 0)) { toast("Bitte eine Menge eingeben."); return; }
+  const fields = itemFields(amt.food, g, amt.mode === "stk" ? amt.stk : null);
+  fields.meal = sheetMeal || null;
+  if (amt.editId) updateItem(state.cur, amt.editId, fields);
+  else addItem(state.cur, Object.assign({id: uid(), name: amt.food.name, t: Date.now()}, fields));
+  const msg = (amt.editId ? "Geändert: " : "Eingetragen: ") + cleanName(amt.food.name) + (sheetMeal ? " · " + mealLabel(sheetMeal) : "");
+  closeSheet(); toast(msg);
+}
+function savePortion(){
+  const v = num($("pv").value);
+  if (!(v > 0 && v < 2000)) { toast("Bitte das Gewicht von 1 Stück in Gramm eingeben."); return; }
+  saveFoodRow({name: amt.food.name, stueck: v});
+  amt.portion = v; amt.mode = "stk"; amt.stk = 1;
+  drawAmount(); render();
+}
+
+function openManual(item){
+  sheetMode = "manual";
+  sheetMeal = item ? (item.meal || null) : (sheetMeal || defaultMeal());
+  openSheet(item ? "Eintrag ändern" : "Eiweiß direkt eintragen",
+    mealSeg() +
+    '<p class="hint">Für Gerichte, bei denen die Eiweißmenge schon ausgerechnet ist.</p>' +
+    '<label for="mName">Was war es?<input class="field" id="mName" value="' + esc(item ? item.name : "") + '" placeholder="z. B. Nudelsalat"></label>' +
+    '<label for="mE">Eiweiß in Gramm<input class="field" id="mE" inputmode="decimal" value="' + (item ? esc(fmt(item.eiweiss)) : "") + '" placeholder="z. B. 3,8"></label>' +
+    '<label for="mK">kcal (wenn bekannt)<input class="field" id="mK" inputmode="decimal" value="' + (item && item.kcal ? esc(Math.round(item.kcal)) : "") + '"></label>' +
+    '<button class="primary" id="mSave" data-edit="' + (item ? esc(item.id) : "") + '">' + (item ? "Ändern" : "Eintragen") + "</button>" +
+    (item ? '<button class="danger" id="del" data-edit="' + esc(item.id) + '">Löschen</button>' : ""), {icon: "✏️"});
+}
+function saveManual(editId){
+  const name = $("mName").value.trim() || "Sonstiges";
+  const e = num($("mE").value), k = num($("mK").value);
+  if (!(e >= 0)) { toast("Bitte die Eiweißmenge eingeben."); return; }
+  const patch = {name, manual: true, g: null, stk: null, p100: null, eiweiss: Math.round(e * 100) / 100, kcal: isFinite(k) ? k : 0, meal: sheetMeal || null};
+  if (editId) updateItem(state.cur, editId, patch);
+  else addItem(state.cur, Object.assign({id: uid(), t: Date.now()}, patch));
+  closeSheet(); toast(editId ? "Geändert" : "Eingetragen");
+}
+
+function openNewFood(prefill){
+  sheetMode = "new";
+  openSheet("Neues Lebensmittel",
+    '<p class="hint">Die Werte stehen auf der Packung bei „pro 100 g“.</p>' +
+    '<label for="nName">Name<input class="field" id="nName" value="' + esc(prefill || "") + '" placeholder="z. B. Reiswaffeln"></label>' +
+    '<label for="nP">Eiweiß pro 100 g<input class="field" id="nP" inputmode="decimal" placeholder="z. B. 2,5"></label>' +
+    '<label for="nK">kcal pro 100 g<input class="field" id="nK" inputmode="decimal"></label>' +
+    '<label for="nS">Gewicht von 1 Stück in g (wenn es Stücke gibt)<input class="field" id="nS" inputmode="decimal"></label>' +
+    '<button class="primary" id="nSave">Speichern</button>', {icon: "➕"});
+}
+function saveNewFood(){
+  const name = $("nName").value.trim(), p = num($("nP").value), k = num($("nK").value), s = num($("nS").value);
+  if (!name) { toast("Bitte einen Namen eingeben."); return; }
+  if (!(p >= 0)) { toast("Bitte den Eiweißwert eingeben."); return; }
+  saveFoodRow({name, p, k: isFinite(k) ? k : null, stueck: s > 0 ? s : null, eigen: true, ausgeblendet: false});
+  openAmount(findFood(name));
+}
+
+function openZiel(){
+  if (state.readOnly) return;
+  sheetMode = "ziel";
+  openSheet("Grenze pro Tag",
+    '<p class="hint">Höchstens so viel Gramm Eiweiß am Tag.</p>' +
+    '<div class="amount"><button class="step" id="zMinus" aria-label="1 Gramm weniger">−</button>' +
+    '<input id="zV" inputmode="decimal" value="' + esc(fmt(zielOf(state.cur))) + '" aria-label="Grenze in Gramm">' +
+    '<button class="step" id="zPlus" aria-label="1 Gramm mehr">+</button></div>' +
+    '<p class="hint">Normal sind ' + esc(fmt(state.settings.ziel || 25)) + " g.</p>" +
+    '<button class="primary" id="zDay">Nur für ' + esc(dayLabel(state.cur) === "Heute" ? "heute" : dayLabel(state.cur)) + "</button>" +
+    '<button class="ghost" id="zAll">Ab jetzt immer</button>', {short: true});
+}
+function saveZiel(all){
+  const v = num($("zV").value);
+  if (!(v > 0 && v < 500)) { toast("Bitte die Grenze in Gramm eingeben."); return; }
+  saveDayZiel(state.cur, v);
+  if (all) saveSettingZiel(v);
+  closeSheet(); render();
+}
+
+/* ---------- Lebensmittel bearbeiten ---------- */
+let efFood = null;
+function openEditFood(food){
+  efFood = findFood(food.name) || food;
+  sheetMode = "editfood";
+  const portion = portionFor(efFood);
+  openSheet("Werte ändern",
+    '<p class="hint">' + esc(efFood.name) + "</p>" +
+    '<label for="eP">Eiweiß pro 100 g<input class="field" id="eP" inputmode="decimal" value="' + esc(fmt2(efFood.p)) + '"></label>' +
+    '<label for="eK">kcal pro 100 g<input class="field" id="eK" inputmode="decimal" value="' + (isFinite(efFood.k) ? esc(fmt2(efFood.k)) : "") + '"></label>' +
+    '<label for="eS">Gewicht von 1 Stück in g (leer lassen, wenn es keine Stücke gibt)<input class="field" id="eS" inputmode="decimal" value="' + (portion ? esc(fmt2(portion)) : "") + '"></label>' +
+    '<p class="hint">Gilt für neue Einträge. Was schon eingetragen ist, bleibt wie es war.</p>' +
+    '<button class="primary" id="efSave">Speichern</button>' +
+    '<button class="danger" id="efHide">Aus der Liste entfernen</button>', {icon: iconFor(efFood.name)});
+}
+function saveEditFood(){
+  const p = num($("eP").value), k = num($("eK").value), st = num($("eS").value);
+  if (!(p >= 0)) { toast("Bitte den Eiweißwert eingeben."); return; }
+  saveFoodRow({name: efFood.name, p, k: isFinite(k) ? k : null, stueck: st > 0 ? st : null, ausgeblendet: false});
+  closeSheet(); toast("Gespeichert");
+}
+function hideFood(){
+  saveFoodRow({name: efFood.name, ausgeblendet: true});
+  closeSheet(); toast(cleanName(efFood.name) + " ist aus der Liste entfernt.");
+}
+
+/* ---------- Konto ---------- */
+function openKonto(){
+  sheetMode = "konto";
+  openSheet("Konto",
+    '<p class="hint">Angemeldet als <b>' + esc(state.email) + "</b></p>" +
+    '<label for="pw1">Neues Passwort<input class="field" id="pw1" type="password" autocomplete="new-password"></label>' +
+    '<label for="pw2">Neues Passwort wiederholen<input class="field" id="pw2" type="password" autocomplete="new-password"></label>' +
+    '<button class="primary" id="pwSave">Passwort ändern</button>' +
+    '<button class="ghost" id="logout">Abmelden</button>', {short: true, icon: "👤"});
+}
+async function savePw(){
+  const a = $("pw1").value, b = $("pw2").value;
+  if (a.length < 8) { toast("Bitte mindestens 8 Zeichen."); return; }
+  if (a !== b) { toast("Die beiden Passwörter sind nicht gleich."); return; }
+  const { error } = await sb.auth.updateUser({password: a});
+  if (error) { toast("Ändern hat nicht geklappt."); return; }
+  closeSheet(); toast("Passwort geändert");
+}
+
+/* ---------- Toast ---------- */
+let toastTimer = null, toastUndo = null;
+function toast(text, undo){
+  $("toastText").textContent = text;
+  toastUndo = undo || null;
+  $("toastBtn").hidden = !undo;
+  $("toast").classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").classList.remove("show"), undo ? 6000 : 2500);
+}
+document.addEventListener("pointerover", e => {
+  if (e.pointerType !== "mouse" || !e.target.closest) return;
+  const r = e.target.closest("[data-ovday]"); if (r) selectOvDay(r.getAttribute("data-ovday"));
+});
+$("toastBtn").addEventListener("click", () => { if (toastUndo) toastUndo(); toastUndo = null; $("toast").classList.remove("show"); });
+
+/* ---------- Ereignisse ---------- */
+$("prev").addEventListener("click", () => { state.cur = addDays(state.cur, -1); render(); });
+$("next").addEventListener("click", () => { if (state.cur < keyOf(new Date())) { state.cur = addDays(state.cur, 1); render(); } });
+$("addBtn").addEventListener("click", () => openAdd());
+$("zielBtn").addEventListener("click", openZiel);
+$("closeSheet").addEventListener("click", closeSheet);
+$("sheet").addEventListener("click", e => { if (e.target === $("sheet")) closeSheet(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && $("sheet").classList.contains("open")) closeSheet();
+  if (e.key === "Enter" && sheetMode === "amount" && e.target.id === "g") { e.preventDefault(); saveAmount(); }
+});
+
+document.addEventListener("click", e => {
+  const rg = e.target.closest("[data-range]");
+  if (rg) { ovRange = +rg.dataset.range; ovSel = null; renderOverview(); return; }
+  const od = e.target.closest("[data-ovday]");
+  if (od) { selectOvDay(od.getAttribute("data-ovday")); return; }
+  const op = e.target.closest("[data-openday]");
+  if (op) { state.cur = op.getAttribute("data-openday"); location.hash = ""; return; }
+  const ob = e.target.closest("button");
+  if (ob && ob.id === "goOv") { location.hash = "uebersicht"; return; }
+  if (ob && ob.id === "ovBack") { location.hash = ""; return; }
+  if (ob && ob.id === "ovMore") { ovAllFoods = !ovAllFoods; renderOverview(); return; }
+  const day = e.target.closest("[data-day]");
+  if (day) { state.cur = day.dataset.day; render(); return; }
+  const fb = e.target.closest("[data-food]");
+  if (fb) { const f = findFood(fb.dataset.food); if (f) openAmount(f); return; }
+  const am = e.target.closest("[data-addmeal]");
+  if (am) { openAdd(am.dataset.addmeal); return; }
+  const mb = e.target.closest("[data-meal]");
+  if (mb) {
+    sheetMeal = mb.dataset.meal;
+    document.querySelectorAll(".segb").forEach(b => { const on = b.dataset.meal === sheetMeal; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); });
+    return;
+  }
+  const ib = e.target.closest("[data-item]");
+  if (ib) {
+    const it = ((state.days[state.cur] || {}).items || []).find(x => x.id === ib.dataset.item);
+    if (!it || state.readOnly) return;
+    if (it.manual) openManual(it);
+    else { const f = findFood(it.name); openAmount({name: it.name, p: num(it.p100), k: num(it.k100), portion: f ? f.portion : null}, it); }
+    return;
+  }
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.stk) { amt.stk = num(t.dataset.stk); calcAmount(); return; }
+  if (t.dataset.g) { amt.g = num(t.dataset.g); calcAmount(); return; }
+  switch (t.id) {
+    case "goManual": openManual(); break;
+    case "editFood": openEditFood(amt.food); break;
+    case "efSave": saveEditFood(); break;
+    case "efHide": hideFood(); break;
+    case "kontoBtn": openKonto(); break;
+    case "pwSave": savePw(); break;
+    case "logout": closeSheet(); sb.auth.signOut(); break;
+    case "goNew": openNewFood($("q") ? $("q").value.trim() : ""); break;
+    case "minus": stepAmount(-1); break;
+    case "plus": stepAmount(1); break;
+    case "toG": amt.mode = "g"; amt.g = Math.round(grams() * 10) / 10; drawAmount(); break;
+    case "toStk": amt.mode = "stk"; amt.stk = Math.max(0.5, Math.round(amt.g / amt.portion * 2) / 2); drawAmount(); break;
+    case "setPortion": $("portionBox").hidden = false; t.hidden = true; try { $("pv").focus(); } catch (x) {} break;
+    case "pSave": savePortion(); break;
+    case "save": saveAmount(); break;
+    case "del": { const id = t.dataset.edit || (amt && amt.editId); closeSheet(); removeItem(state.cur, id); break; }
+    case "mSave": saveManual(t.dataset.edit || null); break;
+    case "nSave": saveNewFood(); break;
+    case "zMinus": $("zV").value = fmt(Math.max(1, (num($("zV").value) || 0) - 1)); break;
+    case "zPlus": $("zV").value = fmt((num($("zV").value) || 0) + 1); break;
+    case "zDay": saveZiel(false); break;
+    case "zAll": saveZiel(true); break;
+  }
+});
+
+/* ---------- Anmeldung und Start ---------- */
+function showLogin(msg){
+  $("loginView").hidden = false; $("app").hidden = true; $("ovView").hidden = true;
+  $("lMsg").textContent = msg || "";
+}
+async function fetchAll(build){
+  const out = [], size = 1000;
+  for (let from = 0; ; from += size) {
+    const { data, error } = await build().range(from, from + size - 1);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < size) break;
+  }
+  return out;
+}
+async function loadAll(){
+  const since = addDays(keyOf(new Date()), -400);
+  const [rows, tage, foods, sets] = await Promise.all([
+    fetchAll(() => sb.from("eiweiss_eintraege").select("*").gte("datum", since).order("datum").order("t").order("id")),
+    fetchAll(() => sb.from("eiweiss_tage").select("*").gte("datum", since).order("datum")),
+    fetchAll(() => sb.from("eiweiss_lebensmittel").select("*").order("name")),
+    fetchAll(() => sb.from("eiweiss_einstellungen").select("*").order("schluessel"))
+  ]);
+  const days = {};
+  rows.forEach(r => { const k = r.datum; (days[k] = days[k] || {date: k, ziel: null, items: []}).items.push(rowToItem(r)); });
+  tage.forEach(t => { (days[t.datum] = days[t.datum] || {date: t.datum, ziel: null, items: []}).ziel = num(t.ziel); });
+  const fr = {}; foods.forEach(f => fr[f.name] = f);
+  const st = {ziel: 25}; sets.forEach(x => { if (x.schluessel === "ziel" && num(x.wert) > 0) st.ziel = num(x.wert); });
+  state.days = days; state.foodRows = fr; state.settings = st; foodsCache = null;
+  $("note").hidden = true;
+  cacheSave(); render();
+}
+function subscribe(){
+  if (channel) sb.removeChannel(channel);
+  channel = sb.channel("eiweiss")
+    .on("postgres_changes", {event: "*", schema: "public", table: "eiweiss_eintraege"}, p => {
+      if (p.eventType === "DELETE") { if (p.old && p.old.id) dropItem(p.old.id); }
+      else if (p.new && p.new.id) placeItem(p.new.datum, rowToItem(p.new));
+      cacheSave(); render();
+    })
+    .on("postgres_changes", {event: "*", schema: "public", table: "eiweiss_tage"}, p => {
+      if (p.new && p.new.datum) { ensureDay(p.new.datum).ziel = num(p.new.ziel); render(); }
+    })
+    .on("postgres_changes", {event: "*", schema: "public", table: "eiweiss_lebensmittel"}, p => {
+      if (p.new && p.new.name) { state.foodRows = Object.assign({}, state.foodRows, {[p.new.name]: p.new}); foodsCache = null; render(); }
+    })
+    .on("postgres_changes", {event: "*", schema: "public", table: "eiweiss_einstellungen"}, p => {
+      if (p.new && p.new.schluessel === "ziel" && num(p.new.wert) > 0) { state.settings = Object.assign({}, state.settings, {ziel: num(p.new.wert)}); render(); }
+    })
+    .subscribe();
+}
+async function afterLogin(session){
+  const email = String(session && session.user && session.user.email || "").toLowerCase();
+  const { data, error } = await sb.from("mitglieder").select("email").limit(1);
+  if (error) { if (!state.email) showLogin("Die Verbindung klappt gerade nicht. Bitte Internet prüfen."); return; }
+  if (!data || !data.length) { await sb.auth.signOut(); showLogin("Diese Adresse hat noch keinen Zugriff. Bitte Thomas fragen."); return; }
+  state.email = email;
+  showView();
+  try { await loadAll(); }
+  catch (e) { try { console.warn(e); } catch (x) {} $("note").hidden = false; $("note").textContent = "Die Daten konnten nicht geladen werden. Bitte Internet prüfen."; }
+  subscribe();
+}
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const email = $("lEmail").value.trim().toLowerCase(), pw = $("lPw").value;
+  if (!email || !pw) { $("lMsg").textContent = "Bitte E-Mail und Passwort eingeben."; return; }
+  $("lBtn").disabled = true; $("lMsg").textContent = "Melde an …";
+  const { data, error } = await sb.auth.signInWithPassword({email, password: pw});
+  $("lBtn").disabled = false;
+  if (error) { $("lMsg").textContent = /invalid/i.test(error.message || "") ? "E-Mail oder Passwort stimmt nicht." : "Anmelden hat nicht geklappt. Bitte Internet prüfen."; return; }
+  $("lPw").value = ""; $("lMsg").textContent = "";
+  await afterLogin(data.session);
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !state.email) return;
+  const t = keyOf(new Date());
+  if (t !== state.today) { if (state.cur === state.today) state.cur = t; state.today = t; render(); }
+  loadAll().catch(() => {});
+});
+async function start(){
+  if (!window.supabase || typeof window.supabase.createClient !== "function") { showLogin("Die App konnte nicht geladen werden. Bitte Internet prüfen und neu öffnen."); return; }
+  sb = window.supabase.createClient(SB_URL, SB_KEY, {auth: {persistSession: true, autoRefreshToken: true, storageKey: "familie-apps-auth"}});
+  sb.auth.onAuthStateChange(ev => {
+    if (ev === "SIGNED_OUT") {
+      cacheClear(); state.email = ""; state.days = {}; state.foodRows = {}; foodsCache = null;
+      if (channel) { sb.removeChannel(channel); channel = null; }
+      if ($("loginView").hidden) showLogin();
+    }
+  });
+  const { data } = await sb.auth.getSession();
+  const session = data && data.session;
+  if (!session) { cacheClear(); showLogin(); return; }
+  if (cacheLoad()) { state.email = String(session.user.email || "").toLowerCase(); showView(); }
+  await afterLogin(session);
+}
+start();
+})();
+</script>
+</body>
+</html>
