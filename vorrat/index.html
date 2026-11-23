@@ -179,46 +179,47 @@ label{font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:6px}
 <body>
 <div class="wrap" id="loginView" hidden>
   <div class="login">
-    <h1>❄️ Vorrat</h1>
-    <p class="hint">Bitte melde dich an – gleiche Anmeldung wie beim Eiweiß-Tagebuch.</p>
+    <h1>❄️ <span data-t="appName"></span></h1>
+    <p class="hint" data-t="loginHint"></p>
     <form id="loginForm" novalidate>
-      <label for="lEmail">E-Mail<input class="field" id="lEmail" type="email" autocomplete="username" inputmode="email" autocapitalize="off"></label>
-      <label for="lPw">Passwort<input class="field" id="lPw" type="password" autocomplete="current-password"></label>
-      <button class="primary" id="lBtn" type="submit">Anmelden</button>
+      <label for="lEmail"><span data-t="email"></span><input class="field" id="lEmail" type="email" autocomplete="username" inputmode="email" autocapitalize="off"></label>
+      <label for="lPw"><span data-t="password"></span><input class="field" id="lPw" type="password" autocomplete="current-password"></label>
+      <button class="primary" id="lBtn" type="submit" data-t="login"></button>
       <p class="hint" id="lMsg" role="status"></p>
     </form>
+    <button class="textbtn" id="lLang" type="button"></button>
   </div>
 </div>
 
 <div class="wrap" id="app" hidden>
   <div class="topbar">
-    <a class="iconbtn" href="../" aria-label="Zu den Familien-Apps">‹</a>
-    <h1>Vorrat<small id="sub">Lädt …</small></h1>
-    <button class="iconbtn" id="setBtn" aria-label="Einstellungen">⚙️</button>
+    <a class="iconbtn" href="../" data-t-aria="backApps">‹</a>
+    <h1><span data-t="appName"></span><small id="sub"></small></h1>
+    <button class="iconbtn" id="setBtn" data-t-aria="settings">⚙️</button>
   </div>
 
   <div class="kpis">
-    <button class="kpi over" data-status="over" aria-pressed="false"><b id="kOver">0</b><small>Abgelaufen</small></button>
-    <button class="kpi near" data-status="near" aria-pressed="false"><b id="kNear">0</b><small>Bald fällig</small></button>
-    <button class="kpi" data-status="" aria-pressed="false"><b id="kAll">0</b><small>Artikel</small></button>
+    <button class="kpi over" data-status="over" aria-pressed="false"><b id="kOver">0</b><small data-t="kOver"></small></button>
+    <button class="kpi near" data-status="near" aria-pressed="false"><b id="kNear">0</b><small data-t="kNear"></small></button>
+    <button class="kpi" data-status="" aria-pressed="false"><b id="kAll">0</b><small data-t="kAll"></small></button>
   </div>
 
-  <div class="chips wrapc" id="orte" role="group" aria-label="Lagerort"></div>
+  <div class="chips wrapc" id="orte" role="group" data-t-aria="ortGroup"></div>
 
   <div class="tools">
-    <input class="search" id="q" type="search" placeholder="Suchen …" aria-label="Im Vorrat suchen" autocomplete="off">
-    <button class="sortbtn" id="sortBtn" aria-label="Sortierung wechseln">⇅ Ablauf</button>
+    <input class="search" id="q" type="search" data-t-ph="search" data-t-aria="searchAria" autocomplete="off">
+    <button class="sortbtn" id="sortBtn" data-t-aria="sortAria"></button>
   </div>
 
   <div id="note" class="note" hidden></div>
   <div id="list"></div>
-  <p class="foot" id="foot">Lädt …</p>
+  <p class="foot" id="foot"></p>
 </div>
 
 <div class="bar" id="bar" hidden>
   <div class="in">
-    <button class="primary" id="scanBtn">📷 Scannen</button>
-    <button class="second" id="manBtn">✍️ Ohne Barcode</button>
+    <button class="primary" id="scanBtn" data-t="scanBtn"></button>
+    <button class="second" id="manBtn" data-t="manBtn"></button>
   </div>
 </div>
 
@@ -227,27 +228,27 @@ label{font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:6px}
     <div class="phead">
       <span class="ic" id="sheetIcon" aria-hidden="true"></span>
       <h3 id="sheetTitle"></h3>
-      <button class="iconbtn" id="closeSheet" aria-label="Schließen">✕</button>
+      <button class="iconbtn" id="closeSheet" data-t-aria="close">✕</button>
     </div>
     <div class="pbody" id="sheetBody"></div>
   </div>
 </div>
 
-<div class="scan" id="scan" hidden role="dialog" aria-modal="true" aria-label="Barcode scannen">
+<div class="scan" id="scan" hidden role="dialog" aria-modal="true" data-t-aria="scanTitle">
   <video id="video" playsinline muted autoplay></video>
   <div class="frame" aria-hidden="true"></div>
   <div class="scantop">
-    <button class="iconbtn" id="scanClose" aria-label="Schließen">✕</button>
-    <span>Barcode scannen</span>
-    <button class="iconbtn" id="torch" aria-label="Licht" aria-pressed="false" hidden>🔦</button>
+    <button class="iconbtn" id="scanClose" data-t-aria="close">✕</button>
+    <span data-t="scanTitle"></span>
+    <button class="iconbtn" id="torch" data-t-aria="torch" aria-pressed="false" hidden>🔦</button>
   </div>
   <div class="scanbot">
     <p id="scanMsg" role="status"></p>
-    <button class="ghost" id="scanManual">Nummer eintippen</button>
+    <button class="ghost" id="scanManual" data-t="manual"></button>
   </div>
 </div>
 
-<div class="toast" id="toast" role="status"><span id="toastText"></span><button id="toastBtn" hidden>Rückgängig</button></div>
+<div class="toast" id="toast" role="status"><span id="toastText"></span><button id="toastBtn" hidden data-t="undo"></button></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
 <script>
@@ -260,9 +261,6 @@ const SB_KEY = "sb_publishable_6rn_pwfxv00TGt828ToZjg_kAvhPZsI";
 const PONYFILL = "https://cdn.jsdelivr.net/npm/barcode-detector@3.2.4/dist/iife/ponyfill.js";
 const OFF_URL = "https://world.openfoodfacts.org/api/v2/product/";
 const LS_CACHE = "vorrat-cache-v1", LS_QUEUE = "vorrat-queue-v1", LS_PREF = "vorrat-pref-v1";
-const MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
-const MON_LONG = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
-const DEFAULT_NAMES = ["Hackfleisch", "Hähnchen", "Suppe", "Soße", "Reste", "Brot", "Brötchen", "Kuchen", "Gemüse", "Beeren"];
 const ORT_ICONS = ["🧊", "❄️", "🥶", "🧺", "🥫", "🍎", "🥛", "🏠"];
 const BALD_STUFEN = [1, 2, 3, 5, 7, 14, 21, 30, 45, 60, 90];
 const HALT_MONATE = [1, 3, 6, 9, 12];
@@ -270,6 +268,162 @@ const HALT_MONATE = [1, 3, 6, 9, 12];
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const norm = s => String(s || "").trim().toLowerCase();
+
+/* ---------- Sprache (Deutsch / Französisch) ---------- */
+const T = {
+  de: {
+    appName: "Vorrat",
+    loginHint: "Bitte melde dich an – gleiche Anmeldung wie bei den anderen Familien-Apps.",
+    email: "E-Mail", password: "Passwort", login: "Anmelden", otherLang: "Français",
+    loginMissing: "Bitte E-Mail und Passwort eingeben.", loggingIn: "Melde an …",
+    loginWrong: "E-Mail oder Passwort stimmt nicht.", loginFail: "Anmelden hat nicht geklappt. Bitte Internet prüfen.",
+    noAccess: "Diese Adresse hat noch keinen Zugriff. Bitte Thomas fragen.",
+    noConnLogin: "Die Verbindung klappt gerade nicht. Bitte Internet prüfen.",
+    appLoadFail: "Die App konnte nicht geladen werden. Bitte Internet prüfen und neu öffnen.",
+    offlineNote: "Keine Verbindung – du siehst den zuletzt geladenen Stand. Änderungen werden gespeichert, sobald wieder Netz da ist.",
+    offlineShort: "Keine Verbindung – du siehst den zuletzt geladenen Stand.",
+    loadFail: "Die Daten konnten nicht geladen werden. Bitte Internet prüfen.",
+    backApps: "Zu den Familien-Apps", settings: "Einstellungen",
+    sub: (n, u) => n + " Artikel · " + u + " Stück", subEmpty: "Noch leer", loading: "Lädt …",
+    kOver: "Abgelaufen", kNear: "Bald fällig", kAll: "Artikel",
+    ortGroup: "Lagerort", all: "Alle", noOrt: "Ohne Ort", noOrtLower: "ohne Ort",
+    search: "Suchen …", searchAria: "Im Vorrat suchen", sortAria: "Sortierung wechseln", sortDate: "⇅ Ablauf", sortName: "⇅ A–Z",
+    emptyList: "Noch nichts eingelagert.<br>Tippe unten auf <b>Scannen</b> oder <b>Ohne Barcode</b>.",
+    nothingFound: "Nichts gefunden.", resetFilter: "Filter zurücksetzen",
+    pending: n => n === 1 ? "1 Änderung wartet auf Verbindung …" : n + " Änderungen warten auf Verbindung …",
+    allSaved: "Alles gespeichert",
+    scanBtn: "📷 Scannen", manBtn: "✍️ Ohne Barcode", close: "Schließen",
+    scanTitle: "Barcode scannen", torch: "Licht", manual: "Nummer eintippen", undo: "Rückgängig",
+    takeAria: name => name + ": eins entnehmen",
+    noMhd: "ohne MHD", mhdPre: "MHD ", untilPre: "bis ", frozenOn: d => "eingefr. " + d,
+    expired: "abgelaufen", today: "heute", tomorrow: "morgen",
+    inDays: n => "in " + n + " Tagen", inMonths: n => "in " + n + " Monaten", inYears: n => "in " + n + " Jahren",
+    sinceYesterday: "seit gestern", sinceDays: n => "seit " + n + " Tagen", sinceMonths: n => "seit " + n + " Monaten",
+    endOf: "Ende ",
+    mon: ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"],
+    monLong: ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+    dateSep: ".",
+    names: ["Hackfleisch", "Hähnchen", "Suppe", "Soße", "Reste", "Brot", "Brötchen", "Kuchen", "Gemüse", "Beeren"],
+    searching: "Suche Produkt …",
+    notFound: "Produkt nicht bekannt – bitte Namen eintippen. Wird fürs nächste Mal gemerkt.",
+    offUnreach: "Produktdatenbank nicht erreichbar – bitte Namen eintippen.",
+    barcodeX: c => "Barcode " + c,
+    whatIsIt: "Was ist es?", namePh: "z. B. Rahmspinat", suggestions: "Vorschläge",
+    inStock: "Schon im Vorrat", takeOneBtn: "1 entnehmen", orAddMore: "Oder unten weitere einlagern.",
+    where: "Wo?", howMany: "Wie viele?", less: "Weniger", more: "Mehr",
+    shelfLife: "Haltbarkeit", bought: "Gekauft (MHD)", selfFrozen: "Selbst eingefroren",
+    frozenOnLabel: "Eingefroren am", keeps: "Hält ca.", months: n => n === 1 ? "1 Monat" : n + " Monate",
+    keepsUntil: "Haltbar bis", orChoose: "(oder selbst wählen)",
+    dateKind: "Art des Datums", modeMonat: "Monat/Jahr", modeDatum: "Genaues Datum", modeOhne: "Ohne",
+    year: "Jahr", month: "Monat", mhdLabel: "Mindestens haltbar bis",
+    note: "Notiz", noteOpt: "(optional, z. B. „oberer Korb“)",
+    save: "Speichern", store: "Einlagern", storeNext: "Einlagern + nächsten scannen", delAll: "Alles aufgebraucht – entfernen",
+    tNew: "Ohne Barcode", tStore: "Einlagern", tEdit: "Bearbeiten",
+    resChooseKeeps: "Bitte „Hält ca.“ wählen", resNoDate: "Ohne Ablaufdatum", resTapMonth: "Jetzt noch den Monat antippen",
+    resTapYM: "Jahr und Monat vom MHD antippen", resChooseDate: "Bitte Datum wählen",
+    resSelf: "Haltbar bis ca. ", resMhd: "MHD ",
+    needName: "Bitte eintragen, was es ist.", needOrt: "Bitte wählen, wo es liegt.",
+    needKeeps: "Bitte „Hält ca.“ oder ein Datum wählen.", needYM: "Bitte Jahr und Monat antippen – oder „Ohne“.",
+    needDate: "Bitte ein Datum wählen – oder „Ohne“.",
+    nowN: (n, name) => "Jetzt " + n + "× " + name, stored: (n, name) => n + "× " + name + " eingelagert", saved: "Gespeichert",
+    left: (name, n) => name + ": noch " + n + "×", usedUp: name => name + " ist aufgebraucht", removed: name => name + " entfernt",
+    saveFail: "Eine Änderung konnte nicht gespeichert werden.",
+    camStart: "Kamera startet …",
+    noCamApi: "Hier ist kein Kamerazugriff möglich. Du kannst die Nummer eintippen.",
+    camDenied: "Kein Kamerazugriff. Bitte die Kamera für diese Seite erlauben – oder die Nummer eintippen.",
+    noCam: "Keine Kamera gefunden. Du kannst die Nummer eintippen.",
+    camFail: "Die Kamera ließ sich nicht starten. Du kannst die Nummer eintippen.",
+    scanLoadFail: "Der Scanner konnte nicht geladen werden. Bitte Internet prüfen – oder die Nummer eintippen.",
+    holdInFrame: "Barcode in den Rahmen halten",
+    codeLabel: "Ziffern unter dem Strichcode", next: "Weiter", codeHint: "Meist 13 Ziffern, z. B. 4001234567890",
+    codeBad: "Bitte die Ziffern unter dem Strichcode eingeben.", codeWrong: "Die Nummer scheint nicht zu stimmen – bitte prüfen.",
+    places: "Lagerorte", placeMeta: (n, d) => n + " Artikel · „bald fällig“ " + d + " Tage vorher",
+    noPlaces: "Noch keine Lagerorte.", addPlace: "+ Lagerort hinzufügen",
+    account: "Konto", loggedInAs: "Angemeldet als", logout: "Abmelden", language: "Sprache",
+    offCredit: "Produktdaten und Bilder: Open Food Facts (offene Datenbank).",
+    placeName: "Name", placePh: "z. B. Kühlschrank", symbol: "Symbol",
+    baldQ: "„Bald fällig“ ab wie vielen Tagen vor Ablauf?", baldHint: "Truhe: 30 Tage passt meist. Kühlschrank eher 2–3 Tage.",
+    delPlaceBlocked: n => "Löschen geht erst, wenn hier nichts mehr liegt (" + n + " Artikel).",
+    delPlace: "Lagerort löschen", back: "Zurück", editPlace: "Lagerort ändern", newPlace: "Neuer Lagerort",
+    needPlaceName: "Bitte einen Namen eingeben.", placeExists: "Diesen Namen gibt es schon.", placeDeleted: "Lagerort gelöscht"
+  },
+  fr: {
+    appName: "Provisions",
+    loginHint: "Connecte-toi – mêmes identifiants que pour les autres applis de la famille.",
+    email: "E-mail", password: "Mot de passe", login: "Se connecter", otherLang: "Deutsch",
+    loginMissing: "Entre ton e-mail et ton mot de passe.", loggingIn: "Connexion …",
+    loginWrong: "E-mail ou mot de passe incorrect.", loginFail: "La connexion a échoué. Vérifie Internet.",
+    noAccess: "Cette adresse n'a pas encore accès. Demande à Thomas.",
+    noConnLogin: "Pas de connexion pour le moment. Vérifie Internet.",
+    appLoadFail: "L'appli n'a pas pu se charger. Vérifie Internet et rouvre-la.",
+    offlineNote: "Pas de connexion – tu vois le dernier état chargé. Les modifications seront enregistrées dès que le réseau revient.",
+    offlineShort: "Pas de connexion – tu vois le dernier état chargé.",
+    loadFail: "Les données n'ont pas pu être chargées. Vérifie Internet.",
+    backApps: "Vers les applis de la famille", settings: "Réglages",
+    sub: (n, u) => n + (n > 1 ? " articles · " : " article · ") + u + (u > 1 ? " pièces" : " pièce"), subEmpty: "Vide pour l'instant", loading: "Chargement …",
+    kOver: "Périmés", kNear: "Bientôt", kAll: "Articles",
+    ortGroup: "Emplacement", all: "Tout", noOrt: "Sans emplacement", noOrtLower: "sans emplacement",
+    search: "Rechercher …", searchAria: "Rechercher dans les provisions", sortAria: "Changer le tri", sortDate: "⇅ Date", sortName: "⇅ A–Z",
+    emptyList: "Rien de rangé pour l'instant.<br>Appuie en bas sur <b>Scanner</b> ou <b>Sans code-barres</b>.",
+    nothingFound: "Rien trouvé.", resetFilter: "Effacer les filtres",
+    pending: n => n === 1 ? "1 modification attend la connexion …" : n + " modifications attendent la connexion …",
+    allSaved: "Tout est enregistré",
+    scanBtn: "📷 Scanner", manBtn: "✍️ Sans code-barres", close: "Fermer",
+    scanTitle: "Scanner le code-barres", torch: "Lampe", manual: "Saisir le numéro", undo: "Annuler",
+    takeAria: name => name + " : en retirer un",
+    noMhd: "sans date", mhdPre: "date ", untilPre: "jusqu'au ", frozenOn: d => "congelé le " + d,
+    expired: "périmé", today: "aujourd'hui", tomorrow: "demain",
+    inDays: n => "dans " + n + " jours", inMonths: n => "dans " + n + " mois", inYears: n => "dans " + n + " ans",
+    sinceYesterday: "depuis hier", sinceDays: n => "depuis " + n + " jours", sinceMonths: n => "depuis " + n + " mois",
+    endOf: "fin ",
+    mon: ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."],
+    monLong: ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
+    dateSep: "/",
+    names: ["Viande hachée", "Poulet", "Soupe", "Sauce", "Restes", "Pain", "Petits pains", "Gâteau", "Légumes", "Fruits rouges"],
+    searching: "Recherche du produit …",
+    notFound: "Produit inconnu – tape son nom. Il sera mémorisé pour la prochaine fois.",
+    offUnreach: "Base de produits injoignable – tape le nom.",
+    barcodeX: c => "Code-barres " + c,
+    whatIsIt: "Qu'est-ce que c'est ?", namePh: "p. ex. épinards à la crème", suggestions: "Suggestions",
+    inStock: "Déjà en stock", takeOneBtn: "En retirer 1", orAddMore: "Ou en ranger d'autres ci-dessous.",
+    where: "Où ?", howMany: "Combien ?", less: "Moins", more: "Plus",
+    shelfLife: "Conservation", bought: "Acheté (date)", selfFrozen: "Congelé maison",
+    frozenOnLabel: "Congelé le", keeps: "Se garde env.", months: n => n + " mois",
+    keepsUntil: "Se garde jusqu'au", orChoose: "(ou choisir)",
+    dateKind: "Type de date", modeMonat: "Mois/année", modeDatum: "Date exacte", modeOhne: "Sans",
+    year: "Année", month: "Mois", mhdLabel: "À consommer de préférence avant",
+    note: "Note", noteOpt: "(facultatif, p. ex. « panier du haut »)",
+    save: "Enregistrer", store: "Ranger", storeNext: "Ranger + scanner le suivant", delAll: "Tout consommé – supprimer",
+    tNew: "Sans code-barres", tStore: "Ranger", tEdit: "Modifier",
+    resChooseKeeps: "Choisis « Se garde env. »", resNoDate: "Sans date", resTapMonth: "Choisis encore le mois",
+    resTapYM: "Choisis l'année et le mois de la date", resChooseDate: "Choisis une date",
+    resSelf: "Se garde jusqu'au ", resMhd: "Date : ",
+    needName: "Indique ce que c'est.", needOrt: "Choisis où c'est rangé.",
+    needKeeps: "Choisis « Se garde env. » ou une date.", needYM: "Choisis l'année et le mois – ou « Sans ».",
+    needDate: "Choisis une date – ou « Sans ».",
+    nowN: (n, name) => "Maintenant " + n + "× " + name, stored: (n, name) => n + "× " + name + " rangé", saved: "Enregistré",
+    left: (name, n) => name + " : encore " + n + "×", usedUp: name => name + " : plus rien", removed: name => name + " supprimé",
+    saveFail: "Une modification n'a pas pu être enregistrée.",
+    camStart: "Démarrage de la caméra …",
+    noCamApi: "Pas d'accès à la caméra ici. Tu peux saisir le numéro.",
+    camDenied: "Pas d'accès à la caméra. Autorise la caméra pour cette page – ou saisis le numéro.",
+    noCam: "Aucune caméra trouvée. Tu peux saisir le numéro.",
+    camFail: "La caméra n'a pas démarré. Tu peux saisir le numéro.",
+    scanLoadFail: "Le scanner n'a pas pu se charger. Vérifie Internet – ou saisis le numéro.",
+    holdInFrame: "Place le code-barres dans le cadre",
+    codeLabel: "Chiffres sous le code-barres", next: "Continuer", codeHint: "En général 13 chiffres, p. ex. 4001234567890",
+    codeBad: "Saisis les chiffres sous le code-barres.", codeWrong: "Le numéro semble faux – vérifie-le.",
+    places: "Emplacements", placeMeta: (n, d) => n + (n > 1 ? " articles" : " article") + " · « bientôt » " + d + " jours avant",
+    noPlaces: "Pas encore d'emplacement.", addPlace: "+ Ajouter un emplacement",
+    account: "Compte", loggedInAs: "Connectée en tant que", logout: "Se déconnecter", language: "Langue",
+    offCredit: "Données et photos des produits : Open Food Facts (base ouverte).",
+    placeName: "Nom", placePh: "p. ex. Frigo", symbol: "Symbole",
+    baldQ: "« Bientôt » combien de jours avant la date ?", baldHint: "Congélateur : 30 jours conviennent. Frigo : plutôt 2–3 jours.",
+    delPlaceBlocked: n => "Suppression possible seulement quand c'est vide (" + n + (n > 1 ? " articles)." : " article)."),
+    delPlace: "Supprimer l'emplacement", back: "Retour", editPlace: "Modifier l'emplacement", newPlace: "Nouvel emplacement",
+    needPlaceName: "Indique un nom.", placeExists: "Ce nom existe déjà.", placeDeleted: "Emplacement supprimé"
+  }
+};
 
 /* ---------- Speicher im Gerät ---------- */
 function lsGet(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
@@ -281,6 +435,26 @@ const state = {email: "", orte: [], artikel: {}, produkte: {}, loaded: false, of
 const view = {ort: "alle", status: null, q: "", sort: "ablauf"};
 const pref = lsGet(LS_PREF) || {};
 let queue = lsGet(LS_QUEUE) || [];
+let LANG = pref.lang || (/^fr/i.test(navigator.language || "") ? "fr" : "de");
+
+function t(key){
+  const v = (T[LANG] && T[LANG][key] !== undefined) ? T[LANG][key] : T.de[key];
+  return typeof v === "function" ? v.apply(null, Array.prototype.slice.call(arguments, 1)) : v;
+}
+function applyStatic(){
+  document.documentElement.lang = LANG;
+  document.title = t("appName");
+  document.querySelectorAll("[data-t]").forEach(el => { el.textContent = t(el.dataset.t); });
+  document.querySelectorAll("[data-t-ph]").forEach(el => { el.placeholder = t(el.dataset.tPh); });
+  document.querySelectorAll("[data-t-aria]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.tAria)); });
+  $("lLang").textContent = t("otherLang");
+  renderSync();
+}
+function setLang(l){
+  LANG = l === "fr" ? "fr" : "de"; pref.lang = LANG; savePref();
+  applyStatic(); render();
+  if (sheetMode === "settings") openSettings();
+}
 
 function savePref(){ lsSet(LS_PREF, pref); }
 function saveQueue(){ lsSet(LS_QUEUE, queue); }
@@ -308,24 +482,24 @@ function daysUntil(k){ return Math.round((parseKey(k) - parseKey(todayKey())) / 
 function lastDay(y, m){ return new Date(y, m, 0).getDate(); }
 function endOfMonth(y, m){ return y + "-" + pad(m) + "-" + pad(lastDay(y, m)); }
 function addMonths(k, n){
-  const d = parseKey(k), t = new Date(d.getFullYear(), d.getMonth() + n, 1);
-  return keyOf(new Date(t.getFullYear(), t.getMonth(), Math.min(d.getDate(), lastDay(t.getFullYear(), t.getMonth() + 1))));
+  const d = parseKey(k), x = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  return keyOf(new Date(x.getFullYear(), x.getMonth(), Math.min(d.getDate(), lastDay(x.getFullYear(), x.getMonth() + 1))));
 }
 function isEom(k){ const d = parseKey(k); return d.getDate() === lastDay(d.getFullYear(), d.getMonth() + 1); }
-function fmtDate(k){ const d = parseKey(k); return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear(); }
-function fmtShort(k){ const d = parseKey(k); return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + String(d.getFullYear()).slice(2); }
-function fmtMhd(k){ const d = parseKey(k); return isEom(k) ? "Ende " + pad(d.getMonth() + 1) + "/" + d.getFullYear() : fmtDate(k); }
-function fmtMhdLong(k){ const d = parseKey(k); return isEom(k) ? "Ende " + MON_LONG[d.getMonth()] + " " + d.getFullYear() : fmtDate(k); }
+function fmtDate(k){ const d = parseKey(k), s = t("dateSep"); return pad(d.getDate()) + s + pad(d.getMonth() + 1) + s + d.getFullYear(); }
+function fmtShort(k){ const d = parseKey(k), s = t("dateSep"); return pad(d.getDate()) + s + pad(d.getMonth() + 1) + s + String(d.getFullYear()).slice(2); }
+function fmtMhd(k){ const d = parseKey(k); return isEom(k) ? t("endOf") + pad(d.getMonth() + 1) + "/" + d.getFullYear() : fmtDate(k); }
+function fmtMhdLong(k){ const d = parseKey(k); return isEom(k) ? t("endOf") + t("monLong")[d.getMonth()] + " " + d.getFullYear() : fmtDate(k); }
 function relText(k){
   const d = daysUntil(k);
-  if (d < 0) return "abgelaufen";
-  if (d === 0) return "heute";
-  if (d === 1) return "morgen";
-  if (d < 45) return "in " + d + " Tagen";
+  if (d < 0) return t("expired");
+  if (d === 0) return t("today");
+  if (d === 1) return t("tomorrow");
+  if (d < 45) return t("inDays", d);
   const m = Math.round(d / 30.44);
-  return m < 24 ? "in " + m + " Monaten" : "in " + Math.round(d / 365.25) + " Jahren";
+  return m < 24 ? t("inMonths", m) : t("inYears", Math.round(d / 365.25));
 }
-function overText(k){ const d = -daysUntil(k); return d > 60 ? "seit " + Math.round(d / 30.44) + " Monaten" : d === 1 ? "seit gestern" : "seit " + d + " Tagen"; }
+function overText(k){ const d = -daysUntil(k); return d > 60 ? t("sinceMonths", Math.round(d / 30.44)) : d === 1 ? t("sinceYesterday") : t("sinceDays", d); }
 
 /* ---------- Bestand ---------- */
 function ortOf(id){ return id ? state.orte.find(o => o.id === id) || null : null; }
@@ -338,7 +512,7 @@ function statusFor(mhd, ortId){
   return d <= baldTage(ortId) ? "near" : "ok";
 }
 const statusOf = a => statusFor(a.mhd, a.ort_id);
-const byName = (a, b) => String(a.name).localeCompare(String(b.name), "de", {sensitivity: "base"});
+const byName = (a, b) => String(a.name).localeCompare(String(b.name), LANG, {sensitivity: "base"});
 const byMhd = (a, b) => (a.mhd && b.mhd ? (a.mhd < b.mhd ? -1 : a.mhd > b.mhd ? 1 : 0) : a.mhd ? -1 : b.mhd ? 1 : 0) || byName(a, b);
 const ART_COLS = ["id", "ort_id", "barcode", "name", "marke", "menge", "bild_url", "anzahl", "mhd", "eingefroren_am", "selbst", "notiz"];
 function artRow(a){
@@ -399,7 +573,7 @@ async function flush(){
   clearTimeout(retryTimer);
   if (stuck) { retryTimer = setTimeout(flush, retryDelay); retryDelay = Math.min(retryDelay * 2, 60000); }
   else retryDelay = 4000;
-  if (dropped) { toast("Eine Änderung konnte nicht gespeichert werden."); loadAll().catch(() => {}); }
+  if (dropped) { toast(t("saveFail")); loadAll().catch(() => {}); }
   renderSync();
 }
 
@@ -407,7 +581,7 @@ async function flush(){
 function thumbHtml(bild, fallback){
   return bild ? '<img src="' + esc(bild) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : esc(fallback);
 }
-function ortLabel(id){ const o = ortOf(id); return o ? o.icon + " " + o.name : "ohne Ort"; }
+function ortLabel(id){ const o = ortOf(id); return o ? o.icon + " " + o.name : t("noOrtLower"); }
 function chip(key, label, n){
   const on = view.ort === key;
   return '<button class="chip' + (on ? " on" : "") + '" data-ort="' + esc(key) + '" aria-pressed="' + on + '">' + esc(label) + "<i>" + n + "</i></button>";
@@ -427,15 +601,15 @@ function itemHtml(a){
   meta.push((a.anzahl || 1) + "×");
   if (view.ort === "alle" || !ortOf(a.ort_id)) meta.push(ortLabel(a.ort_id));
   if (a.notiz) meta.push(a.notiz);
-  const badge = a.mhd ? relText(a.mhd) : "ohne MHD";
+  const badge = a.mhd ? relText(a.mhd) : t("noMhd");
   const when = [];
-  if (a.mhd) when.push(s === "over" ? overText(a.mhd) : (a.selbst ? "bis " : "MHD ") + fmtMhd(a.mhd));
-  if (a.selbst && a.eingefroren_am) when.push("eingefr. " + fmtShort(a.eingefroren_am));
+  if (a.mhd) when.push(s === "over" ? overText(a.mhd) : (a.selbst ? t("untilPre") : t("mhdPre")) + fmtMhd(a.mhd));
+  if (a.selbst && a.eingefroren_am) when.push(t("frozenOn", fmtShort(a.eingefroren_am)));
   return '<div class="item"><button class="imain" data-edit="' + esc(a.id) + '">' +
     '<span class="thumb">' + thumbHtml(a.bild_url, a.selbst ? "🍱" : "📦") + "</span>" +
     '<span class="n"><b>' + esc(a.name) + "</b><small>" + esc(meta.join(" · ")) + "</small>" +
     '<span class="when"><span class="badge ' + s + '">' + esc(badge) + "</span>" + (when.length ? "<small>" + esc(when.join(" · ")) + "</small>" : "") + "</span></span>" +
-    '</button><button class="take" data-take="' + esc(a.id) + '" aria-label="' + esc(a.name) + ': eins entnehmen">−</button></div>';
+    '</button><button class="take" data-take="' + esc(a.id) + '" aria-label="' + esc(t("takeAria", a.name)) + '">−</button></div>';
 }
 function render(){
   if ($("app").hidden) return;
@@ -448,7 +622,7 @@ function render(){
     units += Number(a.anzahl) || 0;
     const k = ortKey(a); perOrt[k] = (perOrt[k] || 0) + 1;
   });
-  $("sub").textContent = all.length ? all.length + " Artikel · " + units + " Stück" : (state.loaded ? "Noch leer" : "Lädt …");
+  $("sub").textContent = all.length ? t("sub", all.length, units) : (state.loaded ? t("subEmpty") : t("loading"));
   $("kOver").textContent = over; $("kNear").textContent = near; $("kAll").textContent = all.length;
   document.querySelectorAll(".kpi").forEach(b => {
     const on = (b.dataset.status || null) === view.status && !!view.status;
@@ -457,20 +631,18 @@ function render(){
 
   if (view.ort !== "alle" && view.ort !== "none" && !ortOf(view.ort)) view.ort = "alle";
   if (view.ort === "none" && !perOrt.none) view.ort = "alle";
-  let chips = chip("alle", "Alle", all.length);
+  let chips = chip("alle", t("all"), all.length);
   state.orte.forEach(o => { chips += chip(o.id, o.icon + " " + o.name, perOrt[o.id] || 0); });
-  if (perOrt.none) chips += chip("none", "Ohne Ort", perOrt.none);
+  if (perOrt.none) chips += chip("none", t("noOrt"), perOrt.none);
   $("orte").innerHTML = chips;
-  $("sortBtn").textContent = view.sort === "name" ? "⇅ A–Z" : "⇅ Ablauf";
+  $("sortBtn").textContent = view.sort === "name" ? t("sortName") : t("sortDate");
 
   const items = visible();
   let h;
   if (!all.length) {
-    h = '<div class="list"><div class="empty">' + (state.loaded || queue.length
-      ? "Noch nichts eingelagert.<br>Tippe unten auf <b>Scannen</b> oder <b>Ohne Barcode</b>."
-      : "Lädt …") + "</div></div>";
+    h = '<div class="list"><div class="empty">' + (state.loaded || queue.length ? t("emptyList") : esc(t("loading"))) + "</div></div>";
   } else if (!items.length) {
-    h = '<div class="list"><div class="empty">Nichts gefunden.<button class="ghost" id="resetFilter">Filter zurücksetzen</button></div></div>';
+    h = '<div class="list"><div class="empty">' + esc(t("nothingFound")) + '<button class="ghost" id="resetFilter">' + esc(t("resetFilter")) + "</button></div></div>";
   } else {
     h = '<div class="list">' + items.map(itemHtml).join("") + "</div>";
   }
@@ -479,11 +651,11 @@ function render(){
 }
 function renderSync(){
   const f = $("foot");
-  if (queue.length) f.textContent = queue.length === 1 ? "1 Änderung wartet auf Verbindung …" : queue.length + " Änderungen warten auf Verbindung …";
-  else f.textContent = state.loaded ? "Alles gespeichert" : "Lädt …";
+  if (queue.length) f.textContent = t("pending", queue.length);
+  else f.textContent = state.loaded ? t("allSaved") : t("loading");
   f.classList.toggle("warn", queue.length > 0 && state.offline);
 }
-function note(text){ $("note").textContent = text || ""; $("note").hidden = !text; }
+function note(key){ $("note").textContent = key ? t(key) : ""; $("note").hidden = !key; }
 
 /* ---------- Blatt (unten) und Zurück-Taste ---------- */
 let sheetMode = null, modalOpen = false;
@@ -513,16 +685,19 @@ async function offLookup(code){
   const ctrl = window.AbortController ? new AbortController() : null;
   const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, 8000);
   try {
-    const url = OFF_URL + encodeURIComponent(code) + ".json?fields=product_name,product_name_de,generic_name_de,brands,quantity,image_front_small_url,image_small_url&lc=de&app_name=Familien-Vorrat";
+    const url = OFF_URL + encodeURIComponent(code) + ".json?fields=product_name,product_name_de,product_name_fr,generic_name_de,generic_name_fr,brands,quantity,image_front_small_url,image_small_url&lc=" + LANG + "&app_name=Familien-Vorrat";
     const r = await fetch(url, ctrl ? {signal: ctrl.signal} : {});
     if (r.status === 404) return null;
     if (!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json();
     if (!j || j.status !== 1 || !j.product) return null;
     const p = j.product;
+    const names = LANG === "fr"
+      ? [p.product_name_fr, p.product_name_de, p.product_name, p.generic_name_fr, p.generic_name_de]
+      : [p.product_name_de, p.product_name, p.generic_name_de, p.product_name_fr];
     const brand = String(p.brands || "").split(",")[0].trim();
     return {
-      name: String(p.product_name_de || p.product_name || p.generic_name_de || "").trim(),
+      name: String(names.find(x => x && String(x).trim()) || "").trim(),
       marke: brand || null,
       menge: String(p.quantity || "").trim() || null,
       bild_url: p.image_front_small_url || p.image_small_url || null
@@ -549,12 +724,12 @@ function formMhd(){
 function resultText(){
   const k = formMhd();
   if (!k) {
-    if (f.selbst) return "Bitte „Hält ca.“ wählen";
-    if (f.mode === "ohne") return "Ohne Ablaufdatum";
-    if (f.mode === "monat") return f.y ? "Jetzt noch den Monat antippen" : "Jahr und Monat vom MHD antippen";
-    return "Bitte Datum wählen";
+    if (f.selbst) return t("resChooseKeeps");
+    if (f.mode === "ohne") return t("resNoDate");
+    if (f.mode === "monat") return f.y ? t("resTapMonth") : t("resTapYM");
+    return t("resChooseDate");
   }
-  return (f.selbst ? "Haltbar bis ca. " : "MHD ") + fmtMhdLong(k) + " · " + (daysUntil(k) < 0 ? "abgelaufen" : relText(k));
+  return (f.selbst ? t("resSelf") : t("resMhd")) + fmtMhdLong(k) + " · " + relText(k);
 }
 function updateResult(){
   const el = $("fRes"); if (!el || !f) return;
@@ -564,13 +739,13 @@ function updateResult(){
 }
 function formSub(){
   const parts = [f.marke, f.menge].filter(Boolean);
-  if (!parts.length && f.barcode) parts.push("Barcode " + f.barcode);
+  if (!parts.length && f.barcode) parts.push(t("barcodeX", f.barcode));
   return parts.join(" · ");
 }
 function lookupMsg(){
-  if (f.lookup === "loading") return "Suche Produkt …";
-  if (f.lookup === "notfound") return "Produkt nicht bekannt – bitte Namen eintippen. Wird fürs nächste Mal gemerkt.";
-  if (f.lookup === "offline") return "Produktdatenbank nicht erreichbar – bitte Namen eintippen.";
+  if (f.lookup === "loading") return t("searching");
+  if (f.lookup === "notfound") return t("notFound");
+  if (f.lookup === "offline") return t("offUnreach");
   return "";
 }
 function formThumb(){ return thumbHtml(f.bild_url, f.selbst ? "🍱" : f.barcode ? "📦" : "✍️"); }
@@ -586,7 +761,7 @@ function updateHead(){
 function nameSuggestions(){
   const out = [], seen = new Set();
   const add = n => { const k = norm(n); if (k && !seen.has(k)) { seen.add(k); out.push(n); } };
-  (pref.namen || []).forEach(add); DEFAULT_NAMES.forEach(add);
+  (pref.namen || []).forEach(add); t("names").forEach(add);
   return out.slice(0, 10);
 }
 function rememberName(n){ pref.namen = [n].concat((pref.namen || []).filter(x => norm(x) !== norm(n))).slice(0, 12); }
@@ -596,64 +771,64 @@ function drawForm(){
   if (!f) return;
   const isEdit = !!f.id;
   let h = '<div class="prod"><span class="thumb big" id="fThumb">' + formThumb() + "</span>" +
-    '<div class="pn"><label for="fName">Was ist es?<input class="field" id="fName" autocomplete="off" list="namenList" placeholder="z. B. Rahmspinat" value="' + esc(f.name) + '"></label>' +
+    '<div class="pn"><label for="fName">' + esc(t("whatIsIt")) + '<input class="field" id="fName" autocomplete="off" list="namenList" placeholder="' + esc(t("namePh")) + '" value="' + esc(f.name) + '"></label>' +
     '<small id="fSub">' + esc(formSub()) + "</small></div></div>";
   const msg = lookupMsg();
   h += '<p class="hint" id="fLookup" role="status"' + (msg ? "" : " hidden") + ">" + esc(msg) + "</p>";
 
   if (!isEdit && !f.barcode) {
-    h += '<div class="chips wrapc" aria-label="Vorschläge">' + nameSuggestions().map(n =>
+    h += '<div class="chips wrapc" aria-label="' + esc(t("suggestions")) + '">' + nameSuggestions().map(n =>
       '<button class="chip" data-name="' + esc(n) + '">' + esc(n) + "</button>").join("") + "</div>";
   }
   if (!isEdit && f.barcode) {
     const st = stockFor(f.barcode);
     if (st.length) {
-      h += '<div class="stock"><b>Schon im Vorrat</b>' + st.map(a =>
+      h += '<div class="stock"><b>' + esc(t("inStock")) + "</b>" + st.map(a =>
         '<div class="srow"><span>' + esc((a.anzahl || 1) + "× · " + ortLabel(a.ort_id) + (a.mhd ? " · " + fmtMhd(a.mhd) : "")) + "</span>" +
-        '<button class="chip" data-take="' + esc(a.id) + '" data-close="1">1 entnehmen</button></div>').join("") +
-        "<small>Oder unten weitere einlagern.</small></div>";
+        '<button class="chip" data-take="' + esc(a.id) + '" data-close="1">' + esc(t("takeOneBtn")) + "</button></div>").join("") +
+        "<small>" + esc(t("orAddMore")) + "</small></div>";
     }
   }
 
   if (state.orte.length) {
-    h += '<div class="grp"><span class="lbl">Wo?</span><div class="seg">' + state.orte.map(o =>
+    h += '<div class="grp"><span class="lbl">' + esc(t("where")) + '</span><div class="seg">' + state.orte.map(o =>
       '<button class="segb' + (o.id === f.ort_id ? " on" : "") + '" data-fort="' + esc(o.id) + '" aria-pressed="' + (o.id === f.ort_id) + '">' + esc(o.icon + " " + o.name) + "</button>").join("") + "</div></div>";
   }
 
-  h += '<div class="grp"><span class="lbl">Wie viele?</span><div class="amount">' +
-    '<button class="step" data-fstep="-1" aria-label="Weniger">−</button><output id="fAnz">' + f.anzahl + "</output>" +
-    '<button class="step" data-fstep="1" aria-label="Mehr">+</button></div></div>';
+  h += '<div class="grp"><span class="lbl">' + esc(t("howMany")) + '</span><div class="amount">' +
+    '<button class="step" data-fstep="-1" aria-label="' + esc(t("less")) + '">−</button><output id="fAnz">' + f.anzahl + "</output>" +
+    '<button class="step" data-fstep="1" aria-label="' + esc(t("more")) + '">+</button></div></div>';
 
-  h += '<div class="grp"><span class="lbl">Haltbarkeit</span><div class="seg">' +
-    '<button class="segb' + (!f.selbst ? " on" : "") + '" data-fart="kauf" aria-pressed="' + !f.selbst + '">Gekauft (MHD)</button>' +
-    '<button class="segb' + (f.selbst ? " on" : "") + '" data-fart="selbst" aria-pressed="' + f.selbst + '">Selbst eingefroren</button></div></div>';
+  h += '<div class="grp"><span class="lbl">' + esc(t("shelfLife")) + '</span><div class="seg">' +
+    '<button class="segb' + (!f.selbst ? " on" : "") + '" data-fart="kauf" aria-pressed="' + !f.selbst + '">' + esc(t("bought")) + "</button>" +
+    '<button class="segb' + (f.selbst ? " on" : "") + '" data-fart="selbst" aria-pressed="' + f.selbst + '">' + esc(t("selfFrozen")) + "</button></div></div>";
 
   if (f.selbst) {
-    h += '<label for="fEin">Eingefroren am<input class="field" id="fEin" type="date" max="' + todayKey() + '" value="' + esc(f.eingefroren || "") + '"></label>';
-    h += '<div class="grp"><span class="lbl">Hält ca.</span><div class="chips wrapc">' + HALT_MONATE.map(n =>
-      '<button class="chip' + (f.monate === n ? " on" : "") + '" data-fmon="' + n + '">' + n + (n === 1 ? " Monat" : " Monate") + "</button>").join("") + "</div></div>";
-    h += '<label for="fDat">Haltbar bis <span class="opt">(oder selbst wählen)</span><input class="field" id="fDat" type="date" value="' + esc(f.datum || "") + '"></label>';
+    h += '<label for="fEin">' + esc(t("frozenOnLabel")) + '<input class="field" id="fEin" type="date" max="' + todayKey() + '" value="' + esc(f.eingefroren || "") + '"></label>';
+    h += '<div class="grp"><span class="lbl">' + esc(t("keeps")) + '</span><div class="chips wrapc">' + HALT_MONATE.map(n =>
+      '<button class="chip' + (f.monate === n ? " on" : "") + '" data-fmon="' + n + '">' + esc(t("months", n)) + "</button>").join("") + "</div></div>";
+    h += '<label for="fDat">' + esc(t("keepsUntil")) + ' <span class="opt">' + esc(t("orChoose")) + '</span><input class="field" id="fDat" type="date" value="' + esc(f.datum || "") + '"></label>';
   } else {
-    h += '<div class="seg three" role="group" aria-label="Art des Datums">' +
-      [["monat", "Monat/Jahr"], ["datum", "Genaues Datum"], ["ohne", "Ohne"]].map(x =>
-        '<button class="segb' + (f.mode === x[0] ? " on" : "") + '" data-fmode="' + x[0] + '" aria-pressed="' + (f.mode === x[0]) + '">' + x[1] + "</button>").join("") + "</div>";
+    h += '<div class="seg three" role="group" aria-label="' + esc(t("dateKind")) + '">' +
+      [["monat", t("modeMonat")], ["datum", t("modeDatum")], ["ohne", t("modeOhne")]].map(x =>
+        '<button class="segb' + (f.mode === x[0] ? " on" : "") + '" data-fmode="' + x[0] + '" aria-pressed="' + (f.mode === x[0]) + '">' + esc(x[1]) + "</button>").join("") + "</div>";
     if (f.mode === "monat") {
       const y0 = new Date().getFullYear(), years = [y0, y0 + 1, y0 + 2, y0 + 3];
       if (f.y && years.indexOf(f.y) < 0) { years.push(f.y); years.sort(); }
-      h += '<div class="chips wrapc" role="group" aria-label="Jahr">' + years.map(y =>
+      h += '<div class="chips wrapc" role="group" aria-label="' + esc(t("year")) + '">' + years.map(y =>
         '<button class="chip' + (f.y === y ? " on" : "") + '" data-fy="' + y + '" aria-pressed="' + (f.y === y) + '">' + y + "</button>").join("") + "</div>";
-      h += '<div class="mgrid" role="group" aria-label="Monat">' + MON.map((mn, i) =>
-        '<button class="mb' + (f.m === i + 1 ? " on" : "") + '" data-fm="' + (i + 1) + '" aria-pressed="' + (f.m === i + 1) + '">' + mn + "</button>").join("") + "</div>";
+      h += '<div class="mgrid" role="group" aria-label="' + esc(t("month")) + '">' + t("mon").map((mn, i) =>
+        '<button class="mb' + (f.m === i + 1 ? " on" : "") + '" data-fm="' + (i + 1) + '" aria-pressed="' + (f.m === i + 1) + '">' + esc(mn) + "</button>").join("") + "</div>";
     } else if (f.mode === "datum") {
-      h += '<label for="fDat">Mindestens haltbar bis<input class="field" id="fDat" type="date" value="' + esc(f.datum || "") + '"></label>';
+      h += '<label for="fDat">' + esc(t("mhdLabel")) + '<input class="field" id="fDat" type="date" value="' + esc(f.datum || "") + '"></label>';
     }
   }
   h += '<div class="result" id="fRes" role="status"></div>';
-  h += '<label for="fNotiz">Notiz <span class="opt">(optional, z. B. „oberer Korb“)</span><input class="field" id="fNotiz" autocomplete="off" value="' + esc(f.notiz || "") + '"></label>';
-  h += '<button class="primary" id="fSave">' + (isEdit ? "Speichern" : "Einlagern") + "</button>";
-  if (!isEdit && f.fromScan) h += '<button class="second wide" id="fSaveNext">Einlagern + nächsten scannen</button>';
-  if (isEdit) h += '<button class="danger" id="fDel">Alles aufgebraucht – entfernen</button>';
-  if (isEdit && f.barcode) h += '<p class="hint">Barcode ' + esc(f.barcode) + "</p>";
+  h += '<label for="fNotiz">' + esc(t("note")) + ' <span class="opt">' + esc(t("noteOpt")) + '</span><input class="field" id="fNotiz" autocomplete="off" value="' + esc(f.notiz || "") + '"></label>';
+  h += '<button class="primary" id="fSave">' + esc(isEdit ? t("save") : t("store")) + "</button>";
+  if (!isEdit && f.fromScan) h += '<button class="second wide" id="fSaveNext">' + esc(t("storeNext")) + "</button>";
+  if (isEdit) h += '<button class="danger" id="fDel">' + esc(t("delAll")) + "</button>";
+  if (isEdit && f.barcode) h += '<p class="hint">' + esc(t("barcodeX", f.barcode)) + "</p>";
 
   const names = new Set();
   (pref.namen || []).forEach(n => names.add(n));
@@ -668,7 +843,7 @@ function openNew(){
   f = newForm({selbst: true, monate: 6});
   f.datum = addMonths(f.eingefroren, 6);
   sheetMode = "form";
-  openSheet("Ohne Barcode", null, {icon: "✍️"});
+  openSheet(t("tNew"), null, {icon: "✍️"});
   drawForm();
 }
 function openForCode(code, fromScan){
@@ -677,7 +852,7 @@ function openForCode(code, fromScan){
   if (p) Object.assign(f, {name: p.name, marke: p.marke, menge: p.menge, bild_url: p.bild_url, quelle: p.quelle || "manuell"});
   else f.lookup = "loading";
   sheetMode = "form";
-  openSheet("Einlagern", null, {icon: "📷"});
+  openSheet(t("tStore"), null, {icon: "📷"});
   drawForm();
   if (!p) lookupOff(code, f);
 }
@@ -709,17 +884,17 @@ function openEdit(id){
   else if (isEom(a.mhd)) { const d = parseKey(a.mhd); f.mode = "monat"; f.y = d.getFullYear(); f.m = d.getMonth() + 1; }
   else { f.mode = "datum"; f.datum = a.mhd; }
   sheetMode = "form";
-  openSheet("Bearbeiten", null, {icon: "✏️"});
+  openSheet(t("tEdit"), null, {icon: "✏️"});
   drawForm();
 }
 
 function saveForm(next){
   const name = ($("fName").value || "").trim();
-  if (!name) { toast("Bitte eintragen, was es ist."); try { $("fName").focus(); } catch (e) {} return; }
-  if (state.orte.length && !ortOf(f.ort_id)) { toast("Bitte wählen, wo es liegt."); return; }
+  if (!name) { toast(t("needName")); try { $("fName").focus(); } catch (e) {} return; }
+  if (state.orte.length && !ortOf(f.ort_id)) { toast(t("needOrt")); return; }
   const mhd = formMhd();
   if (!mhd && (f.selbst || f.mode !== "ohne")) {
-    toast(f.selbst ? "Bitte „Hält ca.“ oder ein Datum wählen." : f.mode === "monat" ? "Bitte Jahr und Monat antippen – oder „Ohne“." : "Bitte ein Datum wählen – oder „Ohne“.");
+    toast(f.selbst ? t("needKeeps") : f.mode === "monat" ? t("needYM") : t("needDate"));
     return;
   }
   const notiz = ($("fNotiz").value || "").trim() || null;
@@ -746,10 +921,10 @@ function saveForm(next){
     if (same) {
       const merged = Object.assign(artRow(same), {anzahl: Math.min(999, (Number(same.anzahl) || 1) + row.anzahl), notiz: same.notiz || notiz});
       ops.push({t: "upsert", tbl: "vorrat_artikel", row: merged});
-      msg = "Jetzt " + merged.anzahl + "× " + name;
+      msg = t("nowN", merged.anzahl, name);
     } else {
       ops.push({t: "upsert", tbl: "vorrat_artikel", row});
-      msg = row.anzahl + "× " + name + " eingelagert";
+      msg = t("stored", row.anzahl, name);
     }
     if (row.ort_id) pref.ort = row.ort_id;
     if (!f.selbst) pref.mode = f.mode;
@@ -757,7 +932,7 @@ function saveForm(next){
     savePref();
   } else {
     ops.push({t: "upsert", tbl: "vorrat_artikel", row});
-    msg = "Gespeichert";
+    msg = t("saved");
   }
   enqueue(ops);
   toast(msg);
@@ -769,17 +944,17 @@ function takeOne(id){
   const before = artRow(a), n = Number(a.anzahl) || 1;
   if (n > 1) {
     enqueue({t: "upsert", tbl: "vorrat_artikel", row: Object.assign(artRow(a), {anzahl: n - 1})});
-    toast(a.name + ": noch " + (n - 1) + "×", () => enqueue({t: "upsert", tbl: "vorrat_artikel", row: before}));
+    toast(t("left", a.name, n - 1), () => enqueue({t: "upsert", tbl: "vorrat_artikel", row: before}));
   } else {
     enqueue({t: "delete", tbl: "vorrat_artikel", id});
-    toast(a.name + " ist aufgebraucht", () => enqueue({t: "upsert", tbl: "vorrat_artikel", row: before}));
+    toast(t("usedUp", a.name), () => enqueue({t: "upsert", tbl: "vorrat_artikel", row: before}));
   }
 }
 function removeItem(id){
   const a = state.artikel[id]; if (!a) return;
   const before = artRow(a);
   enqueue({t: "delete", tbl: "vorrat_artikel", id});
-  toast(a.name + " entfernt", () => enqueue({t: "upsert", tbl: "vorrat_artikel", row: before}));
+  toast(t("removed", a.name), () => enqueue({t: "upsert", tbl: "vorrat_artikel", row: before}));
 }
 
 /* ---------- Scanner ---------- */
@@ -821,24 +996,19 @@ const normCode = s => s.length === 12 ? "0" + s : s;
 async function startScan(){
   uiCloseSheet();
   $("scan").hidden = false; document.body.classList.add("noscroll");
-  $("scanMsg").textContent = "Kamera startet …"; $("torch").hidden = true;
+  $("scanMsg").textContent = t("camStart"); $("torch").hidden = true;
   $("torch").setAttribute("aria-pressed", "false"); scan.torch = false;
   pushModal();
   scan.on = true;
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    scanFail("Hier ist kein Kamerazugriff möglich. Du kannst die Nummer eintippen."); return;
-  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { scanFail(t("noCamApi")); return; }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({audio: false, video: {facingMode: {ideal: "environment"}, width: {ideal: 1280}, height: {ideal: 720}}});
-    if (!scan.on) { stream.getTracks().forEach(t => t.stop()); return; }
+    if (!scan.on) { stream.getTracks().forEach(x => x.stop()); return; }
     scan.stream = stream;
   } catch (e) {
     const n = e && e.name;
-    scanFail(n === "NotAllowedError" || n === "SecurityError"
-      ? "Kein Kamerazugriff. Bitte die Kamera für diese Seite erlauben – oder die Nummer eintippen."
-      : n === "NotFoundError" || n === "OverconstrainedError"
-        ? "Keine Kamera gefunden. Du kannst die Nummer eintippen."
-        : "Die Kamera ließ sich nicht starten. Du kannst die Nummer eintippen.");
+    scanFail(n === "NotAllowedError" || n === "SecurityError" ? t("camDenied")
+      : n === "NotFoundError" || n === "OverconstrainedError" ? t("noCam") : t("camFail"));
     return;
   }
   const v = $("video");
@@ -850,9 +1020,9 @@ async function startScan(){
     $("torch").hidden = !(caps && caps.torch);
   } catch (e) {}
   try { await getDetector(); }
-  catch (e) { scanFail("Der Scanner konnte nicht geladen werden. Bitte Internet prüfen – oder die Nummer eintippen."); return; }
+  catch (e) { scanFail(t("scanLoadFail")); return; }
   if (!scan.on) return;
-  $("scanMsg").textContent = "Barcode in den Rahmen halten";
+  $("scanMsg").textContent = t("holdInFrame");
   tick();
 }
 async function tick(){
@@ -869,7 +1039,7 @@ async function tick(){
   scan.timer = setTimeout(tick, 120);
 }
 function stopStream(){
-  if (scan.stream) { scan.stream.getTracks().forEach(t => { try { t.stop(); } catch (e) {} }); scan.stream = null; }
+  if (scan.stream) { scan.stream.getTracks().forEach(x => { try { x.stop(); } catch (e) {} }); scan.stream = null; }
   const v = $("video"); if (v) v.srcObject = null;
 }
 function stopScan(){
@@ -892,15 +1062,15 @@ async function toggleTorch(){
 function openCodeEntry(){
   stopScan();
   sheetMode = "code";
-  openSheet("Nummer eintippen",
-    '<label for="cIn">Ziffern unter dem Strichcode<input class="field big" id="cIn" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="14"></label>' +
-    '<button class="primary" id="cGo">Weiter</button><p class="hint">Meist 13 Ziffern, z. B. 4001234567890</p>', {short: true, icon: "🔢"});
+  openSheet(t("manual"),
+    '<label for="cIn">' + esc(t("codeLabel")) + '<input class="field big" id="cIn" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="14"></label>' +
+    '<button class="primary" id="cGo">' + esc(t("next")) + '</button><p class="hint">' + esc(t("codeHint")) + "</p>", {short: true, icon: "🔢"});
   setTimeout(() => { try { $("cIn").focus(); } catch (e) {} }, 60);
 }
 function goCode(){
   const v = ($("cIn").value || "").replace(/\D/g, "");
-  if (!/^\d{6,14}$/.test(v)) { toast("Bitte die Ziffern unter dem Strichcode eingeben."); return; }
-  if (v.length === 13 && !gtinOk(v)) { toast("Die Nummer scheint nicht zu stimmen – bitte prüfen."); return; }
+  if (!/^\d{6,14}$/.test(v)) { toast(t("codeBad")); return; }
+  if (v.length === 13 && !gtinOk(v)) { toast(t("codeWrong")); return; }
   openForCode(normCode(v), false);
 }
 
@@ -908,15 +1078,18 @@ function goCode(){
 function openSettings(){
   sheetMode = "settings";
   const cnt = id => Object.values(state.artikel).filter(a => a.ort_id === id).length;
-  let h = '<div class="grp"><span class="lbl">Lagerorte</span><div class="list">' + (state.orte.length ? state.orte.map(o =>
+  let h = '<div class="grp"><span class="lbl">' + esc(t("language")) + '</span><div class="seg">' +
+    '<button class="segb' + (LANG === "de" ? " on" : "") + '" data-lang="de" aria-pressed="' + (LANG === "de") + '">Deutsch</button>' +
+    '<button class="segb' + (LANG === "fr" ? " on" : "") + '" data-lang="fr" aria-pressed="' + (LANG === "fr") + '">Français</button></div></div>';
+  h += '<div class="grp"><span class="lbl">' + esc(t("places")) + '</span><div class="list">' + (state.orte.length ? state.orte.map(o =>
     '<button class="orow" data-editort="' + esc(o.id) + '"><span class="ic">' + esc(o.icon) + '</span><span class="n"><b>' + esc(o.name) + "</b><small>" +
-    cnt(o.id) + " Artikel · „bald fällig“ " + o.bald_tage + " Tage vorher</small></span><span class=\"chev\">›</span></button>").join("")
-    : '<div class="empty">Noch keine Lagerorte.</div>') + "</div>" +
-    '<button class="ghost" id="addOrt">+ Lagerort hinzufügen</button></div>';
-  h += '<div class="grp"><span class="lbl">Konto</span><p class="hint left">Angemeldet als <b>' + esc(state.email) + "</b></p>" +
-    '<button class="ghost" id="logout">Abmelden</button></div>';
-  h += '<p class="hint">Produktdaten und Bilder: Open Food Facts (offene Datenbank).</p>';
-  openSheet("Einstellungen", h, {icon: "⚙️"});
+    esc(t("placeMeta", cnt(o.id), o.bald_tage)) + '</small></span><span class="chev">›</span></button>').join("")
+    : '<div class="empty">' + esc(t("noPlaces")) + "</div>") + "</div>" +
+    '<button class="ghost" id="addOrt">' + esc(t("addPlace")) + "</button></div>";
+  h += '<div class="grp"><span class="lbl">' + esc(t("account")) + '</span><p class="hint left">' + esc(t("loggedInAs")) + " <b>" + esc(state.email) + "</b></p>" +
+    '<button class="ghost" id="logout">' + esc(t("logout")) + "</button></div>";
+  h += '<p class="hint">' + esc(t("offCredit")) + "</p>";
+  openSheet(t("settings"), h, {icon: "⚙️"});
 }
 let oe = null;
 function openOrt(id){
@@ -928,23 +1101,23 @@ function openOrt(id){
 }
 function drawOrt(){
   const used = oe.id ? Object.values(state.artikel).filter(a => a.ort_id === oe.id).length : 0;
-  let h = '<label for="oName">Name<input class="field" id="oName" autocomplete="off" placeholder="z. B. Kühlschrank" value="' + esc(oe.name) + '"></label>';
-  h += '<div class="grp"><span class="lbl">Symbol</span><div class="chips wrapc">' + ORT_ICONS.map(ic =>
+  let h = '<label for="oName">' + esc(t("placeName")) + '<input class="field" id="oName" autocomplete="off" placeholder="' + esc(t("placePh")) + '" value="' + esc(oe.name) + '"></label>';
+  h += '<div class="grp"><span class="lbl">' + esc(t("symbol")) + '</span><div class="chips wrapc">' + ORT_ICONS.map(ic =>
     '<button class="chip emo' + (oe.icon === ic ? " on" : "") + '" data-oicon="' + ic + '" aria-pressed="' + (oe.icon === ic) + '">' + ic + "</button>").join("") + "</div></div>";
-  h += '<div class="grp"><span class="lbl">„Bald fällig“ ab wie vielen Tagen vor Ablauf?</span><div class="amount">' +
-    '<button class="step" data-ostep="-1" aria-label="Weniger">−</button><output id="oTage">' + oe.bald_tage + "</output>" +
-    '<button class="step" data-ostep="1" aria-label="Mehr">+</button></div><p class="hint">Truhe: 30 Tage passt meist. Kühlschrank eher 2–3 Tage.</p></div>';
-  h += '<button class="primary" id="oSave">Speichern</button>';
-  if (oe.id) h += used ? '<p class="hint">Löschen geht erst, wenn hier nichts mehr liegt (' + used + " Artikel).</p>" : '<button class="danger" id="oDel">Lagerort löschen</button>';
-  h += '<button class="textbtn" id="oBack">Zurück</button>';
-  openSheet(oe.id ? "Lagerort ändern" : "Neuer Lagerort", h, {icon: oe.icon});
+  h += '<div class="grp"><span class="lbl">' + esc(t("baldQ")) + '</span><div class="amount">' +
+    '<button class="step" data-ostep="-1" aria-label="' + esc(t("less")) + '">−</button><output id="oTage">' + oe.bald_tage + "</output>" +
+    '<button class="step" data-ostep="1" aria-label="' + esc(t("more")) + '">+</button></div><p class="hint">' + esc(t("baldHint")) + "</p></div>";
+  h += '<button class="primary" id="oSave">' + esc(t("save")) + "</button>";
+  if (oe.id) h += used ? '<p class="hint">' + esc(t("delPlaceBlocked", used)) + "</p>" : '<button class="danger" id="oDel">' + esc(t("delPlace")) + "</button>";
+  h += '<button class="textbtn" id="oBack">' + esc(t("back")) + "</button>";
+  openSheet(oe.id ? t("editPlace") : t("newPlace"), h, {icon: oe.icon});
 }
 function saveOrt(){
   const name = ($("oName").value || "").trim();
-  if (!name) { toast("Bitte einen Namen eingeben."); return; }
-  if (state.orte.some(o => o.id !== oe.id && norm(o.name) === norm(name))) { toast("Diesen Namen gibt es schon."); return; }
+  if (!name) { toast(t("needPlaceName")); return; }
+  if (state.orte.some(o => o.id !== oe.id && norm(o.name) === norm(name))) { toast(t("placeExists")); return; }
   enqueue({t: "upsert", tbl: "vorrat_orte", row: {id: oe.id || uuid(), name, icon: oe.icon, bald_tage: oe.bald_tage, sortierung: oe.sortierung || 0}});
-  toast("Gespeichert");
+  toast(t("saved"));
   openSettings();
 }
 
@@ -968,6 +1141,7 @@ $("closeSheet").addEventListener("click", closeTop);
 $("scanClose").addEventListener("click", closeTop);
 $("scanManual").addEventListener("click", openCodeEntry);
 $("torch").addEventListener("click", toggleTorch);
+$("lLang").addEventListener("click", () => setLang(LANG === "fr" ? "de" : "fr"));
 $("sheet").addEventListener("click", e => { if (e.target === $("sheet")) closeTop(); });
 $("q").addEventListener("input", e => { view.q = e.target.value; render(); });
 $("sortBtn").addEventListener("click", () => { view.sort = view.sort === "name" ? "ablauf" : "name"; render(); });
@@ -976,26 +1150,26 @@ document.addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target && e.target.id === "cIn") { e.preventDefault(); goCode(); }
 });
 document.addEventListener("error", e => {
-  const t = e.target;
-  if (t && t.tagName === "IMG" && t.parentNode && t.parentNode.classList.contains("thumb")) t.parentNode.textContent = "📦";
+  const x = e.target;
+  if (x && x.tagName === "IMG" && x.parentNode && x.parentNode.classList.contains("thumb")) x.parentNode.textContent = "📦";
 }, true);
 
 $("sheetBody").addEventListener("input", e => {
-  const t = e.target;
+  const x = e.target;
   if (sheetMode === "form" && f) {
-    if (t.id === "fName") { f.name = t.value; f.nameTouched = true; }
-    else if (t.id === "fNotiz") f.notiz = t.value;
-  } else if (sheetMode === "ort" && oe && t.id === "oName") oe.name = t.value;
+    if (x.id === "fName") { f.name = x.value; f.nameTouched = true; }
+    else if (x.id === "fNotiz") f.notiz = x.value;
+  } else if (sheetMode === "ort" && oe && x.id === "oName") oe.name = x.value;
 });
 $("sheetBody").addEventListener("change", e => {
-  const t = e.target;
+  const x = e.target;
   if (sheetMode !== "form" || !f) return;
-  if (t.id === "fEin") {
-    f.eingefroren = t.value || todayKey();
+  if (x.id === "fEin") {
+    f.eingefroren = x.value || todayKey();
     if (f.monate) { f.datum = addMonths(f.eingefroren, f.monate); if ($("fDat")) $("fDat").value = f.datum; }
     updateResult();
-  } else if (t.id === "fDat") {
-    f.datum = t.value || null;
+  } else if (x.id === "fDat") {
+    f.datum = x.value || null;
     if (f.selbst) {
       f.monate = HALT_MONATE.find(n => f.datum && addMonths(f.eingefroren, n) === f.datum) || null;
       document.querySelectorAll("[data-fmon]").forEach(b => b.classList.toggle("on", Number(b.dataset.fmon) === f.monate));
@@ -1005,14 +1179,15 @@ $("sheetBody").addEventListener("change", e => {
 });
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("button, [data-edit]");
-  if (!t) return;
-  const d = t.dataset;
+  const b = e.target.closest("button, [data-edit]");
+  if (!b) return;
+  const d = b.dataset;
 
   if (d.take) { takeOne(d.take); if (d.close) closeTop(); return; }
   if (d.edit) { openEdit(d.edit); return; }
   if (d.ort) { view.ort = d.ort; render(); return; }
-  if (t.classList.contains("kpi")) { const s = d.status || null; view.status = view.status === s ? null : s; render(); return; }
+  if (d.lang) { setLang(d.lang); return; }
+  if (b.classList.contains("kpi")) { const s = d.status || null; view.status = view.status === s ? null : s; render(); return; }
   if (d.editort) { openOrt(d.editort); return; }
 
   if (sheetMode === "form" && f) {
@@ -1033,7 +1208,7 @@ document.addEventListener("click", e => {
     if (d.fmon) { f.monate = Number(d.fmon); f.datum = addMonths(f.eingefroren || todayKey(), f.monate); drawForm(); return; }
     if (d.name) {
       f.name = d.name; f.nameTouched = true; $("fName").value = d.name;
-      document.querySelectorAll("[data-name]").forEach(b => b.classList.toggle("on", b === t));
+      document.querySelectorAll("[data-name]").forEach(x => x.classList.toggle("on", x === b));
       return;
     }
   }
@@ -1047,14 +1222,14 @@ document.addEventListener("click", e => {
     }
   }
 
-  switch (t.id) {
+  switch (b.id) {
     case "fSave": saveForm(false); break;
     case "fSaveNext": saveForm(true); break;
     case "fDel": { const id = f && f.id; closeTop(); if (id) removeItem(id); break; }
     case "cGo": goCode(); break;
     case "addOrt": openOrt(null); break;
     case "oSave": saveOrt(); break;
-    case "oDel": { const id = oe.id; enqueue({t: "delete", tbl: "vorrat_orte", id}); toast("Lagerort gelöscht"); openSettings(); break; }
+    case "oDel": { const id = oe.id; enqueue({t: "delete", tbl: "vorrat_orte", id}); toast(t("placeDeleted")); openSettings(); break; }
     case "oBack": openSettings(); break;
     case "logout": closeTop(); sb.auth.signOut(); break;
     case "resetFilter": view.ort = "alle"; view.status = null; view.q = ""; $("q").value = ""; render(); break;
@@ -1108,9 +1283,9 @@ async function resync(){
   flush();
   if (!channel) subscribe();
 }
-function showLogin(msg){
+function showLogin(msgKey){
   $("loginView").hidden = false; $("app").hidden = true; $("bar").hidden = true;
-  $("lMsg").textContent = msg || "";
+  $("lMsg").textContent = msgKey ? t(msgKey) : "";
 }
 function showView(){
   $("loginView").hidden = true; $("app").hidden = false; $("bar").hidden = false;
@@ -1120,27 +1295,27 @@ async function afterLogin(session){
   const email = String(session && session.user && session.user.email || "").toLowerCase();
   const { data, error } = await sb.from("mitglieder").select("email").limit(1);
   if (error) {
-    if (state.email) { state.offline = true; note("Keine Verbindung – du siehst den zuletzt geladenen Stand. Änderungen werden gespeichert, sobald wieder Netz da ist."); renderSync(); }
-    else showLogin("Die Verbindung klappt gerade nicht. Bitte Internet prüfen.");
+    if (state.email) { state.offline = true; note("offlineNote"); renderSync(); }
+    else showLogin("noConnLogin");
     return;
   }
-  if (!data || !data.length) { await sb.auth.signOut(); showLogin("Diese Adresse hat noch keinen Zugriff. Bitte Thomas fragen."); return; }
+  if (!data || !data.length) { await sb.auth.signOut(); showLogin("noAccess"); return; }
   if (state.email && state.email !== email) { state.orte = []; state.artikel = {}; state.produkte = {}; }
   state.email = email;
   showView();
   try { await loadAll(); note(""); }
-  catch (e) { try { console.warn(e); } catch (x) {} note("Die Daten konnten nicht geladen werden. Bitte Internet prüfen."); }
+  catch (e) { try { console.warn(e); } catch (x) {} note("loadFail"); }
   subscribe();
   flush();
 }
 $("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
   const email = $("lEmail").value.trim().toLowerCase(), pw = $("lPw").value;
-  if (!email || !pw) { $("lMsg").textContent = "Bitte E-Mail und Passwort eingeben."; return; }
-  $("lBtn").disabled = true; $("lMsg").textContent = "Melde an …";
+  if (!email || !pw) { $("lMsg").textContent = t("loginMissing"); return; }
+  $("lBtn").disabled = true; $("lMsg").textContent = t("loggingIn");
   const { data, error } = await sb.auth.signInWithPassword({email, password: pw});
   $("lBtn").disabled = false;
-  if (error) { $("lMsg").textContent = /invalid/i.test(error.message || "") ? "E-Mail oder Passwort stimmt nicht." : "Anmelden hat nicht geklappt. Bitte Internet prüfen."; return; }
+  if (error) { $("lMsg").textContent = /invalid/i.test(error.message || "") ? t("loginWrong") : t("loginFail"); return; }
   $("lPw").value = ""; $("lMsg").textContent = "";
   await afterLogin(data.session);
 });
@@ -1150,10 +1325,11 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("online", resync);
 
 async function start(){
+  applyStatic();
   if (!window.supabase || typeof window.supabase.createClient !== "function") {
     const c = lsGet(LS_CACHE);
-    if (c && cacheLoad()) { state.email = c.email; showView(); note("Keine Verbindung – du siehst den zuletzt geladenen Stand."); }
-    else showLogin("Die App konnte nicht geladen werden. Bitte Internet prüfen und neu öffnen.");
+    if (c && cacheLoad()) { state.email = c.email; showView(); note("offlineShort"); }
+    else showLogin("appLoadFail");
     return;
   }
   sb = window.supabase.createClient(SB_URL, SB_KEY, {auth: {persistSession: true, autoRefreshToken: true, storageKey: "familie-apps-auth"}});
@@ -1168,7 +1344,7 @@ async function start(){
   try { const { data } = await sb.auth.getSession(); session = data && data.session; } catch (e) {}
   if (!session) {
     const c = lsGet(LS_CACHE);
-    if (c && navigator.onLine === false && cacheLoad()) { state.email = c.email; showView(); note("Keine Verbindung – du siehst den zuletzt geladenen Stand."); return; }
+    if (c && navigator.onLine === false && cacheLoad()) { state.email = c.email; showView(); note("offlineShort"); return; }
     lsDel(LS_CACHE); showLogin(); return;
   }
   const email = String(session.user.email || "").toLowerCase();
