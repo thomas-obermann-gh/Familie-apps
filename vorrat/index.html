@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vorrat</title>
+<meta name="theme-color" content="#2463b5">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vorrat">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Layout: eine Spalte fürs Handy. Oben Zähler (abgelaufen / bald fällig), Lagerort-Filter und Suche,
+   darunter der Bestand nach Ablaufdatum. Unten fest: Scannen und Ohne Barcode. Eingaben in einem Blatt von unten. */
+:root{
+  --bg:#f2f5f9; --surface:#ffffff; --ink:#1b2633; --muted:#5d6b7c; --line:#d9e1ea;
+  --accent:#2463b5; --accent-soft:#e0ebf9;
+  --ok:#1d7f5a; --ok-soft:#dff2e9; --near:#9a6500; --near-soft:#fbf0d2; --over:#c0313b; --over-soft:#fbe1e1;
+  --font-display:"Fredoka","Nunito",system-ui,sans-serif;
+  --font-body:"Nunito",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#10161d; --surface:#18212b; --ink:#e6edf4; --muted:#9aabbd; --line:#2a3644;
+    --accent:#6aa6ee; --accent-soft:#1b2c42;
+    --ok:#3fb784; --ok-soft:#173329; --near:#d9a33a; --near-soft:#3a3018; --over:#ee6b79; --over-soft:#3d1f24;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:18px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+body.noscroll{overflow:hidden}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none !important}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding:calc(12px + env(safe-area-inset-top)) 16px calc(120px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+
+.topbar{display:flex;align-items:center;gap:8px}
+.topbar h1{flex:1;margin:0;text-align:center;font-family:var(--font-display);font-weight:600;font-size:28px}
+.topbar h1 small{display:block;font-family:var(--font-body);font-size:15px;color:var(--muted);font-weight:700}
+.iconbtn{width:52px;height:52px;border-radius:16px;border:1px solid var(--line);background:var(--surface);font-size:24px;display:grid;place-items:center;flex:none;padding:0;color:inherit;text-decoration:none}
+
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{border:2px solid var(--line);background:var(--surface);border-radius:16px;padding:10px 12px;text-align:left;display:flex;flex-direction:column}
+.kpi b{font-family:var(--font-display);font-weight:600;font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi small{color:var(--muted);font-weight:700;font-size:14px;line-height:1.2}
+.kpi.over b{color:var(--over)}
+.kpi.near b{color:var(--near)}
+.kpi.on{border-color:var(--ink)}
+.kpi.over.on{background:var(--over-soft);border-color:var(--over)}
+.kpi.near.on{background:var(--near-soft);border-color:var(--near)}
+
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.chips::-webkit-scrollbar{display:none}
+.chips.wrapc{flex-wrap:wrap;overflow:visible}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 16px;font-weight:800;font-size:16px;white-space:nowrap}
+.chip.on{background:var(--accent-soft);border-color:var(--accent)}
+.chip i{font-style:normal;color:var(--muted);font-weight:700;margin-left:4px}
+.chip.emo{font-size:24px;padding:6px 12px;line-height:1.2}
+
+.tools{display:flex;gap:8px}
+.search{flex:1;min-width:0;font-size:18px;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface)}
+.search:focus,.field:focus{border-color:var(--accent);outline:none}
+.sortbtn{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:0 14px;font-weight:800;font-size:15px}
+
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.item{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:none}
+.imain{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:10px 8px 10px 12px;border:none;background:none;text-align:left}
+.thumb{width:48px;height:48px;border-radius:12px;background:var(--bg);display:grid;place-items:center;font-size:26px;flex:none;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:contain;background:#fff}
+.thumb.big{width:76px;height:76px;font-size:38px;border-radius:16px}
+.imain .n{flex:1;min-width:0}
+.imain .n b{display:block;font-weight:800;font-size:17px;line-height:1.25;overflow-wrap:break-word}
+.imain .n small{display:block;color:var(--muted);font-size:14px;font-weight:600;overflow-wrap:break-word}
+.when{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:5px}
+.when small{display:inline !important;font-size:13px !important;font-weight:700 !important;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-weight:800;font-size:14px;white-space:nowrap}
+.badge.over{background:var(--over-soft);color:var(--over)}
+.badge.near{background:var(--near-soft);color:var(--near)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.none{background:var(--bg);color:var(--muted)}
+.take{width:58px;flex:none;border:none;border-left:1px solid var(--line);background:none;font-size:30px;font-weight:800;color:var(--accent)}
+.empty{padding:22px 18px;color:var(--muted);text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.foot{color:var(--muted);font-size:14px;text-align:center;margin:0}
+.foot.warn{color:var(--near);font-weight:700}
+.note{background:var(--near-soft);border-radius:14px;padding:10px 14px;font-size:15px;font-weight:600}
+
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:linear-gradient(to top,var(--bg) 72%,transparent);padding:18px 16px calc(14px + env(safe-area-inset-bottom));pointer-events:none}
+.bar .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:10px;pointer-events:auto}
+.bar .primary,.bar .second{font-size:18px;padding:15px 8px}
+.primary{width:100%;border:none;border-radius:18px;background:var(--accent);color:#fff;font-weight:800;font-size:20px;padding:16px 10px}
+@media (prefers-color-scheme: dark){.primary{color:#0b1520}}
+.second{border:2px solid var(--accent);border-radius:18px;background:var(--surface);color:var(--accent);font-weight:800;font-size:18px;padding:14px 10px}
+.second.wide{width:100%}
+.ghost{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;font-weight:700;font-size:16px}
+.danger{width:100%;border:1px solid var(--over);color:var(--over);background:none;border-radius:18px;font-weight:800;font-size:17px;padding:14px}
+.textbtn{border:none;background:none;color:var(--muted);font-weight:700;font-size:16px;text-decoration:underline;padding:6px 0;align-self:center}
+
+.sheet{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;justify-content:flex-end;background:rgba(10,16,24,.45)}
+.sheet.open{display:flex}
+.panel{background:var(--bg);border-radius:24px 24px 0 0;max-height:94%;height:94%;display:flex;flex-direction:column;overflow:hidden;animation:up .22s ease}
+.panel.short{height:auto}
+@keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.panel{animation:none}}
+.phead{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.phead .ic{font-size:30px;line-height:1}
+.phead h3{flex:1;margin:0;font-family:var(--font-display);font-weight:600;font-size:22px;overflow-wrap:anywhere}
+.pbody{flex:1;overflow-y:auto;padding:16px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px;max-width:560px;width:100%;margin:0 auto}
+.pbody > *{flex-shrink:0}
+
+label{font-weight:700;font-size:16px;display:flex;flex-direction:column;gap:6px}
+.opt{color:var(--muted);font-weight:600}
+.field{font-size:19px;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);width:100%;min-height:52px}
+.field.big{font-size:28px;letter-spacing:2px;text-align:center;font-variant-numeric:tabular-nums}
+.hint{color:var(--muted);font-size:15px;margin:0;text-align:center}
+.hint.left{text-align:left}
+.grp{display:flex;flex-direction:column;gap:8px}
+.lbl{font-weight:700;font-size:16px}
+.prod{display:flex;gap:12px;align-items:flex-start}
+.pn{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.pn small{color:var(--muted);font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg.three{grid-template-columns:repeat(3,1fr)}
+.segb{border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:11px 6px;font-weight:800;font-size:16px;line-height:1.2}
+.segb.on{border-color:var(--accent);background:var(--accent-soft)}
+.mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mb{border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 4px;font-weight:800;font-size:16px}
+.mb.on{border-color:var(--accent);background:var(--accent-soft)}
+.amount{display:flex;align-items:center;gap:12px}
+.amount output{flex:1;min-width:0;text-align:center;font-family:var(--font-display);font-size:40px;font-weight:600;padding:6px;border-radius:18px;border:2px solid var(--line);background:var(--surface);font-variant-numeric:tabular-nums}
+.step{width:68px;height:68px;border-radius:20px;border:1px solid var(--line);background:var(--surface);font-size:32px;font-weight:800;flex:none}
+.result{border-radius:14px;padding:12px 14px;text-align:center;font-weight:800;background:var(--surface);border:1px solid var(--line)}
+.result.over{background:var(--over-soft);color:var(--over);border-color:transparent}
+.result.near{background:var(--near-soft);color:var(--near);border-color:transparent}
+.result.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.stock{background:var(--accent-soft);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.stock b{font-size:16px}
+.srow{display:flex;align-items:center;gap:10px}
+.srow span{flex:1;min-width:0;font-weight:700;font-size:16px}
+.stock small{color:var(--muted);font-weight:600;font-size:14px}
+.orow{display:flex;align-items:center;gap:12px;padding:12px 16px;border:none;border-bottom:1px solid var(--line);background:none;text-align:left;width:100%}
+.orow:last-child{border-bottom:none}
+.orow .ic{font-size:26px;width:32px;text-align:center;flex:none}
+.orow .n{flex:1;min-width:0}
+.orow .n b{display:block;font-size:17px}
+.orow .n small{color:var(--muted);font-size:14px;font-weight:600}
+.orow .chev{color:var(--muted);font-size:24px}
+
+.scan{position:fixed;inset:0;z-index:30;background:#000;color:#fff}
+.scan video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scan .frame{position:absolute;left:50%;top:42%;width:min(82vw,380px);height:min(44vw,200px);transform:translate(-50%,-50%);border:3px solid #fff;border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.5)}
+.scan .frame::after{content:"";position:absolute;left:8%;right:8%;top:50%;height:2px;background:#ff5a66;opacity:.85}
+.scantop{position:absolute;left:0;right:0;top:0;z-index:2;display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 14px 12px;font-weight:800}
+.scantop span{flex:1;text-align:center;font-size:17px}
+.scan .iconbtn{background:rgba(0,0,0,.55);border-color:rgba(255,255,255,.35);color:#fff}
+.scan .iconbtn[aria-pressed="true"]{background:#fff;color:#000}
+.scanbot{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:16px 16px calc(28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.scanbot p{margin:0;font-weight:700;max-width:420px;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.scanbot .ghost{background:rgba(255,255,255,.94);color:#111;border:none;font-size:17px;padding:13px 20px}
+
+.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:40;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 16px;display:none;align-items:center;gap:14px;font-weight:700;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.toast.show{display:flex}
+.toast button{border:none;background:none;color:var(--accent);font-weight:800;text-decoration:underline;flex:none}
+@media (prefers-color-scheme: dark){.toast button{color:#2463b5}}
+
+.login{display:flex;flex-direction:column;gap:16px;padding-top:10vh}
+.login h1{margin:0;text-align:center;font-family:var(--font-display);font-weight:600;font-size:32px}
+.login form{display:flex;flex-direction:column;gap:14px}
+</style>
+</head>
+<body>
+<div class="wrap" id="loginView" hidden>
+  <div class="login">
+    <h1>❄️ Vorrat</h1>
+    <p class="hint">Bitte melde dich an – gleiche Anmeldung wie beim Eiweiß-Tagebuch.</p>
+    <form id="loginForm" novalidate>
+      <label for="lEmail">E-Mail<input class="field" id="lEmail" type="email" autocomplete="username" inputmode="email" autocapitalize="off"></label>
+      <label for="lPw">Passwort<input class="field" id="lPw" type="password" autocomplete="current-password"></label>
+      <button class="primary" id="lBtn" type="submit">Anmelden</button>
+      <p class="hint" id="lMsg" role="status"></p>
+    </form>
+  </div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <div class="topbar">
+    <a class="iconbtn" href="../" aria-label="Zu den Familien-Apps">‹</a>
+    <h1>Vorrat<small id="sub">Lädt …</small></h1>
+    <button class="iconbtn" id="setBtn" aria-label="Einstellungen">⚙️</button>
+  </div>
+
+  <div class="kpis">
+    <button class="kpi over" data-status="over" aria-pressed="false"><b id="kOver">0</b><small>Abgelaufen</small></button>
+    <button class="kpi near" data-status="near" aria-pressed="false"><b id="kNear">0</b><small>Bald fällig</small></button>
+    <button class="kpi" data-status="" aria-pressed="false"><b id="kAll">0</b><small>Artikel</small></button>
+  </div>
+
+  <div class="chips wrapc" id="orte" role="group" aria-label="Lagerort"></div>
+
+  <div class="tools">
+    <input class="search" id="q" type="search" placeholder="Suchen …" aria-label="Im Vorrat suchen" autocomplete="off">
+    <button class="sortbtn" id="sortBtn" aria-label="Sortierung wechseln">⇅ Ablauf</button>
+  </div>
+
+  <div id="note" class="note" hidden></div>
+  <div id="list"></div>
+  <p class="foot" id="foot">Lädt …</p>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <div class="in">
+    <button class="primary" id="scanBtn">📷 Scannen</button>
+    <button class="second" id="manBtn">✍️ Ohne Barcode</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="panel" id="panel">
+    <div class="phead">
+      <span class="ic" id="sheetIcon" aria-hidden="true"></span>
+      <h3 id="sheetTitle"></h3>
+      <button class="iconbtn" id="closeSheet" aria-label="Schließen">✕</button>
+    </div>
+    <div class="pbody" id="sheetBody"></div>
+  </div>
+</div>
+
+<div class="scan" id="scan" hidden role="dialog" aria-modal="true" aria-label="Barcode scannen">
+  <video id="video" playsinline muted autoplay></video>
+  <div class="frame" aria-hidden="true"></div>
+  <div class="scantop">
+    <button class="iconbtn" id="scanClose" aria-label="Schließen">✕</button>
+    <span>Barcode scannen</span>
+    <button class="iconbtn" id="torch" aria-label="Licht" aria-pressed="false" hidden>🔦</button>
+  </div>
+  <div class="scanbot">
+    <p id="scanMsg" role="status"></p>
+    <button class="ghost" id="scanManual">Nummer eintippen</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"><span id="toastText"></span><button id="toastBtn" hidden>Rückgängig</button></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" crossorigin="anonymous"></script>
+<script>
+(function(){
+"use strict";
+
+/* ---------- Einstellungen ---------- */
+const SB_URL = "https://fqhbjtudenacdsrqwdcl.supabase.co";
+const SB_KEY = "sb_publishable_6rn_pwfxv00TGt828ToZjg_kAvhPZsI";
+const PONYFILL = "https://cdn.jsdelivr.net/npm/barcode-detector@3.2.4/dist/iife/ponyfill.js";
+const OFF_URL = "https://world.openfoodfacts.org/api/v2/product/";
+const LS_CACHE = "vorrat-cache-v1", LS_QUEUE = "vorrat-queue-v1", LS_PREF = "vorrat-pref-v1";
+const MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+const MON_LONG = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+const DEFAULT_NAMES = ["Hackfleisch", "Hähnchen", "Suppe", "Soße", "Reste", "Brot", "Brötchen", "Kuchen", "Gemüse", "Beeren"];
+const ORT_ICONS = ["🧊", "❄️", "🥶", "🧺", "🥫", "🍎", "🥛", "🏠"];
+const BALD_STUFEN = [1, 2, 3, 5, 7, 14, 21, 30, 45, 60, 90];
+const HALT_MONATE = [1, 3, 6, 9, 12];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const norm = s => String(s || "").trim().toLowerCase();
+
+/* ---------- Speicher im Gerät ---------- */
+function lsGet(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function lsDel(k){ try { localStorage.removeItem(k); } catch (e) {} }
+
+let sb = null, channel = null;
+const state = {email: "", orte: [], artikel: {}, produkte: {}, loaded: false, offline: false};
+const view = {ort: "alle", status: null, q: "", sort: "ablauf"};
+const pref = lsGet(LS_PREF) || {};
+let queue = lsGet(LS_QUEUE) || [];
+
+function savePref(){ lsSet(LS_PREF, pref); }
+function saveQueue(){ lsSet(LS_QUEUE, queue); }
+function cacheSave(){ if (state.email) lsSet(LS_CACHE, {email: state.email, orte: state.orte, artikel: state.artikel, produkte: state.produkte}); }
+function cacheLoad(email){
+  const c = lsGet(LS_CACHE);
+  if (!c || (email && c.email !== email)) return false;
+  state.orte = c.orte || []; state.artikel = c.artikel || {}; state.produkte = c.produkte || {};
+  return true;
+}
+function uuid(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+  const h = Array.from(b, x => x.toString(16).padStart(2, "0")).join("");
+  return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+}
+
+/* ---------- Datum ---------- */
+const pad = n => String(n).padStart(2, "0");
+function keyOf(d){ return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+function parseKey(k){ const p = String(k).split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+function todayKey(){ return keyOf(new Date()); }
+function daysUntil(k){ return Math.round((parseKey(k) - parseKey(todayKey())) / 86400000); }
+function lastDay(y, m){ return new Date(y, m, 0).getDate(); }
+function endOfMonth(y, m){ return y + "-" + pad(m) + "-" + pad(lastDay(y, m)); }
+function addMonths(k, n){
+  const d = parseKey(k), t = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  return keyOf(new Date(t.getFullYear(), t.getMonth(), Math.min(d.getDate(), lastDay(t.getFullYear(), t.getMonth() + 1))));
+}
+function isEom(k){ const d = parseKey(k); return d.getDate() === lastDay(d.getFullYear(), d.getMonth() + 1); }
+function fmtDate(k){ const d = parseKey(k); return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear(); }
+function fmtShort(k){ const d = parseKey(k); return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + String(d.getFullYear()).slice(2); }
+function fmtMhd(k){ const d = parseKey(k); return isEom(k) ? "Ende " + pad(d.getMonth() + 1) + "/" + d.getFullYear() : fmtDate(k); }
+function fmtMhdLong(k){ const d = parseKey(k); return isEom(k) ? "Ende " + MON_LONG[d.getMonth()] + " " + d.getFullYear() : fmtDate(k); }
+function relText(k){
+  const d = daysUntil(k);
+  if (d < 0) return "abgelaufen";
+  if (d === 0) return "heute";
+  if (d === 1) return "morgen";
+  if (d < 45) return "in " + d + " Tagen";
+  const m = Math.round(d / 30.44);
+  return m < 24 ? "in " + m + " Monaten" : "in " + Math.round(d / 365.25) + " Jahren";
+}
+function overText(k){ const d = -daysUntil(k); return d > 60 ? "seit " + Math.round(d / 30.44) + " Monaten" : d === 1 ? "seit gestern" : "seit " + d + " Tagen"; }
+
+/* ---------- Bestand ---------- */
+function ortOf(id){ return id ? state.orte.find(o => o.id === id) || null : null; }
+function ortKey(a){ return ortOf(a.ort_id) ? a.ort_id : "none"; }
+function baldTage(ortId){ const o = ortOf(ortId); return o ? Number(o.bald_tage) : 30; }
+function statusFor(mhd, ortId){
+  if (!mhd) return "none";
+  const d = daysUntil(mhd);
+  if (d < 0) return "over";
+  return d <= baldTage(ortId) ? "near" : "ok";
+}
+const statusOf = a => statusFor(a.mhd, a.ort_id);
+const byName = (a, b) => String(a.name).localeCompare(String(b.name), "de", {sensitivity: "base"});
+const byMhd = (a, b) => (a.mhd && b.mhd ? (a.mhd < b.mhd ? -1 : a.mhd > b.mhd ? 1 : 0) : a.mhd ? -1 : b.mhd ? 1 : 0) || byName(a, b);
+const ART_COLS = ["id", "ort_id", "barcode", "name", "marke", "menge", "bild_url", "anzahl", "mhd", "eingefroren_am", "selbst", "notiz"];
+function artRow(a){
+  const r = {};
+  ART_COLS.forEach(c => { r[c] = a[c] === undefined ? null : a[c]; });
+  r.selbst = !!r.selbst; r.anzahl = Math.max(1, Number(r.anzahl) || 1);
+  return r;
+}
+function sortOrte(){ state.orte.sort((a, b) => (a.sortierung || 0) - (b.sortierung || 0) || String(a.name).localeCompare(String(b.name), "de")); }
+
+/* ---------- Änderungen: sofort anzeigen, dann speichern (wartet, wenn kein Netz) ---------- */
+const keyCol = tbl => tbl === "vorrat_produkte" ? "barcode" : "id";
+function applyOp(op){
+  if (op.tbl === "vorrat_orte") {
+    if (op.t === "upsert") {
+      const i = state.orte.findIndex(o => o.id === op.row.id);
+      if (i >= 0) state.orte[i] = Object.assign({}, state.orte[i], op.row); else state.orte.push(Object.assign({}, op.row));
+    } else {
+      state.orte = state.orte.filter(o => o.id !== op.id);
+      Object.values(state.artikel).forEach(a => { if (a.ort_id === op.id) a.ort_id = null; });
+    }
+    sortOrte();
+    return;
+  }
+  const map = op.tbl === "vorrat_artikel" ? state.artikel : state.produkte, k = keyCol(op.tbl);
+  if (op.t === "upsert") map[op.row[k]] = Object.assign({}, map[op.row[k]] || {}, op.row);
+  else delete map[op.id];
+}
+function enqueue(ops){
+  (Array.isArray(ops) ? ops : [ops]).forEach(op => { queue.push(op); applyOp(op); });
+  saveQueue(); cacheSave(); render(); flush();
+}
+let flushing = false, retryTimer = null, retryDelay = 4000;
+const retryable = res => { const s = res && res.status; return !s || s === 401 || s === 408 || s === 429 || s >= 500; };
+async function flush(){
+  if (flushing || !sb || !state.email) return;
+  if (!queue.length) { renderSync(); return; }
+  flushing = true;
+  let stuck = false, dropped = false;
+  try {
+    while (queue.length) {
+      const op = queue[0], k = keyCol(op.tbl);
+      let res;
+      try {
+        res = op.t === "upsert"
+          ? await sb.from(op.tbl).upsert(op.row, {onConflict: k})
+          : await sb.from(op.tbl).delete().eq(k, op.id);
+      } catch (e) { res = {error: e, status: 0}; }
+      if (res && res.error) {
+        if (retryable(res)) { stuck = true; break; }
+        try { console.warn(res.error); } catch (x) {}
+        dropped = true;
+      }
+      queue.shift(); saveQueue();
+    }
+  } finally { flushing = false; }
+  state.offline = stuck;
+  clearTimeout(retryTimer);
+  if (stuck) { retryTimer = setTimeout(flush, retryDelay); retryDelay = Math.min(retryDelay * 2, 60000); }
+  else retryDelay = 4000;
+  if (dropped) { toast("Eine Änderung konnte nicht gespeichert werden."); loadAll().catch(() => {}); }
+  renderSync();
+}
+
+/* ---------- Anzeige ---------- */
+function thumbHtml(bild, fallback){
+  return bild ? '<img src="' + esc(bild) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : esc(fallback);
+}
+function ortLabel(id){ const o = ortOf(id); return o ? o.icon + " " + o.name : "ohne Ort"; }
+function chip(key, label, n){
+  const on = view.ort === key;
+  return '<button class="chip' + (on ? " on" : "") + '" data-ort="' + esc(key) + '" aria-pressed="' + on + '">' + esc(label) + "<i>" + n + "</i></button>";
+}
+function visible(){
+  const q = norm(view.q);
+  let arr = Object.values(state.artikel);
+  if (view.ort !== "alle") arr = arr.filter(a => ortKey(a) === view.ort);
+  if (view.status) arr = arr.filter(a => statusOf(a) === view.status);
+  if (q) arr = arr.filter(a => norm([a.name, a.marke, a.notiz].join(" ")).includes(q));
+  return arr.sort(view.sort === "name" ? byName : byMhd);
+}
+function itemHtml(a){
+  const s = statusOf(a);
+  const meta = [];
+  if (a.marke) meta.push(a.marke);
+  meta.push((a.anzahl || 1) + "×");
+  if (view.ort === "alle" || !ortOf(a.ort_id)) meta.push(ortLabel(a.ort_id));
+  if (a.notiz) meta.push(a.notiz);
+  const badge = a.mhd ? relText(a.mhd) : "ohne MHD";
+  const when = [];
+  if (a.mhd) when.push(s === "over" ? overText(a.mhd) : (a.selbst ? "bis " : "MHD ") + fmtMhd(a.mhd));
+  if (a.selbst && a.eingefroren_am) when.push("eingefr. " + fmtShort(a.eingefroren_am));
+  return '<div class="item"><button class="imain" data-edit="' + esc(a.id) + '">' +
+    '<span class="thumb">' + thumbHtml(a.bild_url, a.selbst ? "🍱" : "📦") + "</span>" +
+    '<span class="n"><b>' + esc(a.name) + "</b><small>" + esc(meta.join(" · ")) + "</small>" +
+    '<span class="when"><span class="badge ' + s + '">' + esc(badge) + "</span>" + (when.length ? "<small>" + esc(when.join(" · ")) + "</small>" : "") + "</span></span>" +
+    '</button><button class="take" data-take="' + esc(a.id) + '" aria-label="' + esc(a.name) + ': eins entnehmen">−</button></div>';
+}
+function render(){
+  if ($("app").hidden) return;
+  const all = Object.values(state.artikel);
+  let over = 0, near = 0, units = 0;
+  const perOrt = {};
+  all.forEach(a => {
+    const s = statusOf(a);
+    if (s === "over") over++; else if (s === "near") near++;
+    units += Number(a.anzahl) || 0;
+    const k = ortKey(a); perOrt[k] = (perOrt[k] || 0) + 1;
+  });
+  $("sub").textContent = all.length ? all.length + " Artikel · " + units + " Stück" : (state.loaded ? "Noch leer" : "Lädt …");
+  $("kOver").textContent = over; $("kNear").textContent = near; $("kAll").textContent = all.length;
+  document.querySelectorAll(".kpi").forEach(b => {
+    const on = (b.dataset.status || null) === view.status && !!view.status;
+    b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));
+  });
+
+  if (view.ort !== "alle" && view.ort !== "none" && !ortOf(view.ort)) view.ort = "alle";
+  if (view.ort === "none" && !perOrt.none) view.ort = "alle";
+  let chips = chip("alle", "Alle", all.length);
+  state.orte.forEach(o => { chips += chip(o.id, o.icon + " " + o.name, perOrt[o.id] || 0); });
+  if (perOrt.none) chips += chip("none", "Ohne Ort", perOrt.none);
+  $("orte").innerHTML = chips;
+  $("sortBtn").textContent = view.sort === "name" ? "⇅ A–Z" : "⇅ Ablauf";
+
+  const items = visible();
+  let h;
+  if (!all.length) {
+    h = '<div class="list"><div class="empty">' + (state.loaded || queue.length
+      ? "Noch nichts eingelagert.<br>Tippe unten auf <b>Scannen</b> oder <b>Ohne Barcode</b>."
+      : "Lädt …") + "</div></div>";
+  } else if (!items.length) {
+    h = '<div class="list"><div class="empty">Nichts gefunden.<button class="ghost" id="resetFilter">Filter zurücksetzen</button></div></div>';
+  } else {
+    h = '<div class="list">' + items.map(itemHtml).join("") + "</div>";
+  }
+  $("list").innerHTML = h;
+  renderSync();
+}
+function renderSync(){
+  const f = $("foot");
+  if (queue.length) f.textContent = queue.length === 1 ? "1 Änderung wartet auf Verbindung …" : queue.length + " Änderungen warten auf Verbindung …";
+  else f.textContent = state.loaded ? "Alles gespeichert" : "Lädt …";
+  f.classList.toggle("warn", queue.length > 0 && state.offline);
+}
+function note(text){ $("note").textContent = text || ""; $("note").hidden = !text; }
+
+/* ---------- Blatt (unten) und Zurück-Taste ---------- */
+let sheetMode = null, modalOpen = false;
+function pushModal(){ if (!modalOpen) { try { history.pushState({vorratModal: 1}, ""); } catch (e) {} modalOpen = true; } }
+function openSheet(title, html, opt){
+  opt = opt || {};
+  $("sheetTitle").textContent = title;
+  $("sheetIcon").textContent = opt.icon || "";
+  $("panel").classList.toggle("short", !!opt.short);
+  if (html != null) $("sheetBody").innerHTML = html;
+  if (!$("sheet").classList.contains("open")) { $("sheet").classList.add("open"); $("sheetBody").scrollTop = 0; }
+  document.body.classList.add("noscroll");
+  pushModal();
+}
+function uiCloseSheet(){
+  $("sheet").classList.remove("open"); $("sheetBody").innerHTML = ""; sheetMode = null; f = null;
+  if ($("scan").hidden) document.body.classList.remove("noscroll");
+}
+function closeTop(){
+  if (modalOpen) { try { history.back(); return; } catch (e) {} }
+  uiCloseSheet(); stopScan();
+}
+window.addEventListener("popstate", () => { modalOpen = false; uiCloseSheet(); stopScan(); });
+
+/* ---------- Produktdatenbank (Open Food Facts) ---------- */
+async function offLookup(code){
+  const ctrl = window.AbortController ? new AbortController() : null;
+  const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, 8000);
+  try {
+    const url = OFF_URL + encodeURIComponent(code) + ".json?fields=product_name,product_name_de,generic_name_de,brands,quantity,image_front_small_url,image_small_url&lc=de&app_name=Familien-Vorrat";
+    const r = await fetch(url, ctrl ? {signal: ctrl.signal} : {});
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    if (!j || j.status !== 1 || !j.product) return null;
+    const p = j.product;
+    const brand = String(p.brands || "").split(",")[0].trim();
+    return {
+      name: String(p.product_name_de || p.product_name || p.generic_name_de || "").trim(),
+      marke: brand || null,
+      menge: String(p.quantity || "").trim() || null,
+      bild_url: p.image_front_small_url || p.image_small_url || null
+    };
+  } finally { clearTimeout(timer); }
+}
+
+/* ---------- Einlagern / Bearbeiten ---------- */
+let f = null;
+function newForm(base){
+  const ort = ortOf(pref.ort) ? pref.ort : (state.orte[0] ? state.orte[0].id : null);
+  return Object.assign({
+    id: null, barcode: null, name: "", marke: null, menge: null, bild_url: null, quelle: "manuell", off: null,
+    ort_id: ort, anzahl: 1, selbst: false, mode: pref.mode || "monat", y: null, m: null, datum: null,
+    eingefroren: todayKey(), monate: null, notiz: "", fromScan: false, lookup: null, nameTouched: false
+  }, base || {});
+}
+function formMhd(){
+  if (f.selbst) return f.datum || null;
+  if (f.mode === "monat") return f.y && f.m ? endOfMonth(f.y, f.m) : null;
+  if (f.mode === "datum") return f.datum || null;
+  return null;
+}
+function resultText(){
+  const k = formMhd();
+  if (!k) {
+    if (f.selbst) return "Bitte „Hält ca.“ wählen";
+    if (f.mode === "ohne") return "Ohne Ablaufdatum";
+    if (f.mode === "monat") return f.y ? "Jetzt noch den Monat antippen" : "Jahr und Monat vom MHD antippen";
+    return "Bitte Datum wählen";
+  }
+  return (f.selbst ? "Haltbar bis ca. " : "MHD ") + fmtMhdLong(k) + " · " + (daysUntil(k) < 0 ? "abgelaufen" : relText(k));
+}
+function updateResult(){
+  const el = $("fRes"); if (!el || !f) return;
+  const k = formMhd();
+  el.textContent = resultText();
+  el.className = "result" + (k ? " " + statusFor(k, f.ort_id) : "");
+}
+function formSub(){
+  const parts = [f.marke, f.menge].filter(Boolean);
+  if (!parts.length && f.barcode) parts.push("Barcode " + f.barcode);
+  return parts.join(" · ");
+}
+function lookupMsg(){
+  if (f.lookup === "loading") return "Suche Produkt …";
+  if (f.lookup === "notfound") return "Produkt nicht bekannt – bitte Namen eintippen. Wird fürs nächste Mal gemerkt.";
+  if (f.lookup === "offline") return "Produktdatenbank nicht erreichbar – bitte Namen eintippen.";
+  return "";
+}
+function formThumb(){ return thumbHtml(f.bild_url, f.selbst ? "🍱" : f.barcode ? "📦" : "✍️"); }
+function updateHead(){
+  if (!f || sheetMode !== "form") return;
+  const inp = $("fName");
+  if (inp && !f.nameTouched) inp.value = f.name;
+  if ($("fThumb")) $("fThumb").innerHTML = formThumb();
+  if ($("fSub")) $("fSub").textContent = formSub();
+  const msg = lookupMsg();
+  if ($("fLookup")) { $("fLookup").textContent = msg; $("fLookup").hidden = !msg; }
+}
+function nameSuggestions(){
+  const out = [], seen = new Set();
+  const add = n => { const k = norm(n); if (k && !seen.has(k)) { seen.add(k); out.push(n); } };
+  (pref.namen || []).forEach(add); DEFAULT_NAMES.forEach(add);
+  return out.slice(0, 10);
+}
+function rememberName(n){ pref.namen = [n].concat((pref.namen || []).filter(x => norm(x) !== norm(n))).slice(0, 12); }
+function stockFor(code){ return Object.values(state.artikel).filter(a => a.barcode === code).sort(byMhd); }
+
+function drawForm(){
+  if (!f) return;
+  const isEdit = !!f.id;
+  let h = '<div class="prod"><span class="thumb big" id="fThumb">' + formThumb() + "</span>" +
+    '<div class="pn"><label for="fName">Was ist es?<input class="field" id="fName" autocomplete="off" list="namenList" placeholder="z. B. Rahmspinat" value="' + esc(f.name) + '"></label>' +
+    '<small id="fSub">' + esc(formSub()) + "</small></div></div>";
+  const msg = lookupMsg();
+  h += '<p class="hint" id="fLookup" role="status"' + (msg ? "" : " hidden") + ">" + esc(msg) + "</p>";
+
+  if (!isEdit && !f.barcode) {
+    h += '<div class="chips wrapc" aria-label="Vorschläge">' + nameSuggestions().map(n =>
+      '<button class="chip" data-name="' + esc(n) + '">' + esc(n) + "</button>").join("") + "</div>";
+  }
+  if (!isEdit && f.barcode) {
+    const st = stockFor(f.barcode);
+    if (st.length) {
+      h += '<div class="stock"><b>Schon im Vorrat</b>' + st.map(a =>
+        '<div class="srow"><span>' + esc((a.anzahl || 1) + "× · " + ortLabel(a.ort_id) + (a.mhd ? " · " + fmtMhd(a.mhd) : "")) + "</span>" +
+        '<button class="chip" data-take="' + esc(a.id) + '" data-close="1">1 entnehmen</button></div>').join("") +
+        "<small>Oder unten weitere einlagern.</small></div>";
+    }
+  }
+
+  if (state.orte.length) {
+    h += '<div class="grp"><span class="lbl">Wo?</span><div class="seg">' + state.orte.map(o =>
+      '<button class="segb' + (o.id === f.ort_id ? " on" : "") + '" data-fort="' + esc(o.id) + '" aria-pressed="' + (o.id === f.ort_id) + '">' + esc(o.icon + " " + o.name) + "</button>").join("") + "</div></div>";
+  }
+
+  h += '<div class="grp"><span class="lbl">Wie viele?</span><div class="amount">' +
+    '<button class="step" data-fstep="-1" aria-label="Weniger">−</button><output id="fAnz">' + f.anzahl + "</output>" +
+    '<button class="step" data-fstep="1" aria-label="Mehr">+</button></div></div>';
+
+  h += '<div class="grp"><span class="lbl">Haltbarkeit</span><div class="seg">' +
+    '<button class="segb' + (!f.selbst ? " on" : "") + '" data-fart="kauf" aria-pressed="' + !f.selbst + '">Gekauft (MHD)</button>' +
+    '<button class="segb' + (f.selbst ? " on" : "") + '" data-fart="selbst" aria-pressed="' + f.selbst + '">Selbst eingefroren</button></div></div>';
+
+  if (f.selbst) {
+    h += '<label for="fEin">Eingefroren am<input class="field" id="fEin" type="date" max="' + todayKey() + '" value="' + esc(f.eingefroren || "") + '"></label>';
+    h += '<div class="grp"><span class="lbl">Hält ca.</span><div class="chips wrapc">' + HALT_MONATE.map(n =>
+      '<button class="chip' + (f.monate === n ? " on" : "") + '" data-fmon="' + n + '">' + n + (n === 1 ? " Monat" : " Monate") + "</button>").join("") + "</div></div>";
+    h += '<label for="fDat">Haltbar bis <span class="opt">(oder selbst wählen)</span><input class="field" id="fDat" type="date" value="' + esc(f.datum || "") + '"></label>';
+  } else {
+    h += '<div class="seg three" role="group" aria-label="Art des Datums">' +
+      [["monat", "Monat/Jahr"], ["datum", "Genaues Datum"], ["ohne", "Ohne"]].map(x =>
+        '<button class="segb' + (f.mode === x[0] ? " on" : "") + '" data-fmode="' + x[0] + '" aria-pressed="' + (f.mode === x[0]) + '">' + x[1] + "</button>").join("") + "</div>";
+    if (f.mode === "monat") {
+      const y0 = new Date().getFullYear(), years = [y0, y0 + 1, y0 + 2, y0 + 3];
+      if (f.y && years.indexOf(f.y) < 0) { years.push(f.y); years.sort(); }
+      h += '<div class="chips wrapc" role="group" aria-label="Jahr">' + years.map(y =>
+        '<button class="chip' + (f.y === y ? " on" : "") + '" data-fy="' + y + '" aria-pressed="' + (f.y === y) + '">' + y + "</button>").join("") + "</div>";
+      h += '<div class="mgrid" role="group" aria-label="Monat">' + MON.map((mn, i) =>
+        '<button class="mb' + (f.m === i + 1 ? " on" : "") + '" data-fm="' + (i + 1) + '" aria-pressed="' + (f.m === i + 1) + '">' + mn + "</button>").join("") + "</div>";
+    } else if (f.mode === "datum") {
+      h += '<label for="fDat">Mindestens haltbar bis<input class="field" id="fDat" type="date" value="' + esc(f.datum || "") + '"></label>';
+    }
+  }
+  h += '<div class="result" id="fRes" role="status"></div>';
+  h += '<label for="fNotiz">Notiz <span class="opt">(optional, z. B. „oberer Korb“)</span><input class="field" id="fNotiz" autocomplete="off" value="' + esc(f.notiz || "") + '"></label>';
+  h += '<button class="primary" id="fSave">' + (isEdit ? "Speichern" : "Einlagern") + "</button>";
+  if (!isEdit && f.fromScan) h += '<button class="second wide" id="fSaveNext">Einlagern + nächsten scannen</button>';
+  if (isEdit) h += '<button class="danger" id="fDel">Alles aufgebraucht – entfernen</button>';
+  if (isEdit && f.barcode) h += '<p class="hint">Barcode ' + esc(f.barcode) + "</p>";
+
+  const names = new Set();
+  (pref.namen || []).forEach(n => names.add(n));
+  Object.values(state.artikel).forEach(a => { if (!a.barcode) names.add(a.name); });
+  h += '<datalist id="namenList">' + Array.from(names).map(n => '<option value="' + esc(n) + '">').join("") + "</datalist>";
+
+  $("sheetBody").innerHTML = h;
+  updateResult();
+}
+
+function openNew(){
+  f = newForm({selbst: true, monate: 6});
+  f.datum = addMonths(f.eingefroren, 6);
+  sheetMode = "form";
+  openSheet("Ohne Barcode", null, {icon: "✍️"});
+  drawForm();
+}
+function openForCode(code, fromScan){
+  const p = state.produkte[code];
+  f = newForm({barcode: code, fromScan: !!fromScan});
+  if (p) Object.assign(f, {name: p.name, marke: p.marke, menge: p.menge, bild_url: p.bild_url, quelle: p.quelle || "manuell"});
+  else f.lookup = "loading";
+  sheetMode = "form";
+  openSheet("Einlagern", null, {icon: "📷"});
+  drawForm();
+  if (!p) lookupOff(code, f);
+}
+async function lookupOff(code, form){
+  let r;
+  try { r = await offLookup(code); }
+  catch (e) { if (f !== form) return; form.lookup = "offline"; updateHead(); return; }
+  if (f !== form) return;
+  if (r) { form.marke = r.marke; form.menge = r.menge; form.bild_url = r.bild_url; }
+  if (!r || !r.name) {
+    form.lookup = "notfound"; updateHead();
+    if (!form.nameTouched) { try { $("fName").focus(); } catch (e) {} }
+    return;
+  }
+  form.lookup = null; form.off = r;
+  if (!form.nameTouched) form.name = r.name;
+  updateHead();
+}
+function openEdit(id){
+  const a = state.artikel[id]; if (!a) return;
+  f = newForm({
+    id: a.id, barcode: a.barcode, name: a.name, marke: a.marke, menge: a.menge, bild_url: a.bild_url,
+    ort_id: a.ort_id, anzahl: Number(a.anzahl) || 1, selbst: !!a.selbst, notiz: a.notiz || "", nameTouched: true
+  });
+  if (a.selbst) {
+    f.eingefroren = a.eingefroren_am || todayKey(); f.datum = a.mhd || null;
+    f.monate = HALT_MONATE.find(n => a.mhd && addMonths(f.eingefroren, n) === a.mhd) || null;
+  } else if (!a.mhd) f.mode = "ohne";
+  else if (isEom(a.mhd)) { const d = parseKey(a.mhd); f.mode = "monat"; f.y = d.getFullYear(); f.m = d.getMonth() + 1; }
+  else { f.mode = "datum"; f.datum = a.mhd; }
+  sheetMode = "form";
+  openSheet("Bearbeiten", null, {icon: "✏️"});
+  drawForm();
+}
+
+function saveForm(next){
+  const name = ($("fName").value || "").trim();
+  if (!name) { toast("Bitte eintragen, was es ist."); try { $("fName").focus(); } catch (e) {} return; }
+  if (state.orte.length && !ortOf(f.ort_id)) { toast("Bitte wählen, wo es liegt."); return; }
+  const mhd = formMhd();
+  if (!mhd && (f.selbst || f.mode !== "ohne")) {
+    toast(f.selbst ? "Bitte „Hält ca.“ oder ein Datum wählen." : f.mode === "monat" ? "Bitte Jahr und Monat antippen – oder „Ohne“." : "Bitte ein Datum wählen – oder „Ohne“.");
+    return;
+  }
+  const notiz = ($("fNotiz").value || "").trim() || null;
+  const ops = [];
+  if (f.barcode) {
+    const old = state.produkte[f.barcode];
+    const quelle = f.off && f.off.name === name ? "off" : (old && old.name === name ? (old.quelle || "manuell") : "manuell");
+    const pr = {barcode: f.barcode, name, marke: f.marke || null, menge: f.menge || null, bild_url: f.bild_url || null, quelle};
+    if (!old || old.name !== pr.name || (old.marke || null) !== pr.marke || (old.menge || null) !== pr.menge || (old.bild_url || null) !== pr.bild_url) {
+      ops.push({t: "upsert", tbl: "vorrat_produkte", row: pr});
+    }
+  }
+  const row = {
+    id: f.id || uuid(), ort_id: ortOf(f.ort_id) ? f.ort_id : null, barcode: f.barcode || null, name,
+    marke: f.marke || null, menge: f.menge || null, bild_url: f.bild_url || null, anzahl: f.anzahl,
+    mhd, eingefroren_am: f.selbst ? (f.eingefroren || null) : null, selbst: !!f.selbst, notiz
+  };
+  let msg;
+  if (!f.id) {
+    const same = Object.values(state.artikel).find(a =>
+      (a.ort_id || null) === row.ort_id &&
+      (row.barcode ? a.barcode === row.barcode : (!a.barcode && norm(a.name) === norm(name))) &&
+      (a.mhd || null) === (row.mhd || null) && !!a.selbst === row.selbst);
+    if (same) {
+      const merged = Object.assign(artRow(same), {anzahl: Math.min(999, (Number(same.anzahl) || 1) + row.anzahl), notiz: same.notiz || notiz});
+      ops.push({t: "upsert", tbl: "vorrat_artikel", row: merged});
+      msg = "Jetzt " + merged.anzahl + "× " + name;
+    } else {
+      ops.push({t: "upsert", tbl: "vorrat_artikel", row});
+      msg = row.anzahl + "× " + name + " eingelagert";
+    }
+    if (row.ort_id) pref.ort = row.ort_id;
+    if (!f.selbst) pref.mode = f.mode;
+    if (!row.barcode) rememberName(name);
+    savePref();
+  } else {
+    ops.push({t: "upsert", tbl: "vorrat_artikel", row});
+    msg = "Gespeichert";
+  }
+  enqueue(ops);
+  toast(msg);
+  if (next) startScan(); else closeTop();
+}
+
+function takeOne(id){
+  const a = state.artikel[id]; if (!a) return;
+  const before = artRow(a), n = Number(a.anzahl) || 1;
+  if (n > 1) {
+    enqueue({t: "upsert", tbl: "vorrat_artikel", row: Object.assign(artRow(a), {anzahl: n - 1})});
+    toast(a.name + ": noch " + (n - 1) + "×", () => enqueue({t: "upsert", tbl: "vorrat_artikel", row: before}));
+  } else {
+    enqueue({t: "delete", tbl: "vorrat_artikel", id});
+    toast(a.name + " ist aufgebraucht", () => enqueue({t: "upsert", tbl: "vorrat_artikel", row: before}));
+  }
+}
+function removeItem(id){
+  const a = state.artikel[id]; if (!a) return;
+  const before = artRow(a);
+  enqueue({t: "delete", tbl: "vorrat_artikel", id});
+  toast(a.name + " entfernt", () => enqueue({t: "upsert", tbl: "vorrat_artikel", row: before}));
+}
+
+/* ---------- Scanner ---------- */
+const scan = {stream: null, on: false, timer: null, torch: false, detector: null};
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = src; s.crossOrigin = "anonymous"; s.onload = res; s.onerror = () => rej(new Error("load " + src));
+    document.head.appendChild(s);
+  });
+}
+async function getDetector(){
+  if (scan.detector) return scan.detector;
+  const formats = ["ean_13", "ean_8", "upc_a", "upc_e"];
+  if ("BarcodeDetector" in window) {
+    try {
+      const sup = await window.BarcodeDetector.getSupportedFormats();
+      const use = formats.filter(x => sup.indexOf(x) >= 0);
+      if (use.indexOf("ean_13") >= 0) { scan.detector = new window.BarcodeDetector({formats: use}); return scan.detector; }
+    } catch (e) {}
+  }
+  if (!window.BarcodeDetectionAPI) await loadScript(PONYFILL);
+  scan.detector = new window.BarcodeDetectionAPI.BarcodeDetector({formats});
+  return scan.detector;
+}
+function gtinOk(s){
+  const d = s.split("").map(Number), check = d.pop();
+  let sum = 0;
+  d.reverse().forEach((x, i) => { sum += x * (i % 2 === 0 ? 3 : 1); });
+  return (10 - sum % 10) % 10 === check;
+}
+function validCode(s, fmt){
+  if (!/^\d{6,14}$/.test(s)) return false;
+  if (fmt === "upc_e") return true;
+  return [8, 12, 13, 14].indexOf(s.length) >= 0 && gtinOk(s);
+}
+const normCode = s => s.length === 12 ? "0" + s : s;
+
+async function startScan(){
+  uiCloseSheet();
+  $("scan").hidden = false; document.body.classList.add("noscroll");
+  $("scanMsg").textContent = "Kamera startet …"; $("torch").hidden = true;
+  $("torch").setAttribute("aria-pressed", "false"); scan.torch = false;
+  pushModal();
+  scan.on = true;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    scanFail("Hier ist kein Kamerazugriff möglich. Du kannst die Nummer eintippen."); return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: false, video: {facingMode: {ideal: "environment"}, width: {ideal: 1280}, height: {ideal: 720}}});
+    if (!scan.on) { stream.getTracks().forEach(t => t.stop()); return; }
+    scan.stream = stream;
+  } catch (e) {
+    const n = e && e.name;
+    scanFail(n === "NotAllowedError" || n === "SecurityError"
+      ? "Kein Kamerazugriff. Bitte die Kamera für diese Seite erlauben – oder die Nummer eintippen."
+      : n === "NotFoundError" || n === "OverconstrainedError"
+        ? "Keine Kamera gefunden. Du kannst die Nummer eintippen."
+        : "Die Kamera ließ sich nicht starten. Du kannst die Nummer eintippen.");
+    return;
+  }
+  const v = $("video");
+  v.srcObject = scan.stream;
+  try { await v.play(); } catch (e) {}
+  try {
+    const tr = scan.stream.getVideoTracks()[0];
+    const caps = tr && tr.getCapabilities ? tr.getCapabilities() : {};
+    $("torch").hidden = !(caps && caps.torch);
+  } catch (e) {}
+  try { await getDetector(); }
+  catch (e) { scanFail("Der Scanner konnte nicht geladen werden. Bitte Internet prüfen – oder die Nummer eintippen."); return; }
+  if (!scan.on) return;
+  $("scanMsg").textContent = "Barcode in den Rahmen halten";
+  tick();
+}
+async function tick(){
+  if (!scan.on) return;
+  const v = $("video");
+  if (v.readyState >= 2 && v.videoWidth) {
+    try {
+      const codes = await scan.detector.detect(v);
+      if (!scan.on) return;
+      const hit = (codes || []).map(c => ({v: String(c.rawValue || "").trim(), fmt: c.format})).find(c => validCode(c.v, c.fmt));
+      if (hit) { gotCode(hit.v); return; }
+    } catch (e) {}
+  }
+  scan.timer = setTimeout(tick, 120);
+}
+function stopStream(){
+  if (scan.stream) { scan.stream.getTracks().forEach(t => { try { t.stop(); } catch (e) {} }); scan.stream = null; }
+  const v = $("video"); if (v) v.srcObject = null;
+}
+function stopScan(){
+  scan.on = false; clearTimeout(scan.timer); stopStream();
+  $("scan").hidden = true;
+  if (!$("sheet").classList.contains("open")) document.body.classList.remove("noscroll");
+}
+function scanFail(msg){ scan.on = false; clearTimeout(scan.timer); stopStream(); $("scanMsg").textContent = msg; }
+function gotCode(code){
+  try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {}
+  stopScan();
+  openForCode(normCode(code), true);
+}
+async function toggleTorch(){
+  const tr = scan.stream && scan.stream.getVideoTracks()[0]; if (!tr) return;
+  scan.torch = !scan.torch;
+  try { await tr.applyConstraints({advanced: [{torch: scan.torch}]}); } catch (e) { scan.torch = false; }
+  $("torch").setAttribute("aria-pressed", String(scan.torch));
+}
+function openCodeEntry(){
+  stopScan();
+  sheetMode = "code";
+  openSheet("Nummer eintippen",
+    '<label for="cIn">Ziffern unter dem Strichcode<input class="field big" id="cIn" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="14"></label>' +
+    '<button class="primary" id="cGo">Weiter</button><p class="hint">Meist 13 Ziffern, z. B. 4001234567890</p>', {short: true, icon: "🔢"});
+  setTimeout(() => { try { $("cIn").focus(); } catch (e) {} }, 60);
+}
+function goCode(){
+  const v = ($("cIn").value || "").replace(/\D/g, "");
+  if (!/^\d{6,14}$/.test(v)) { toast("Bitte die Ziffern unter dem Strichcode eingeben."); return; }
+  if (v.length === 13 && !gtinOk(v)) { toast("Die Nummer scheint nicht zu stimmen – bitte prüfen."); return; }
+  openForCode(normCode(v), false);
+}
+
+/* ---------- Einstellungen und Lagerorte ---------- */
+function openSettings(){
+  sheetMode = "settings";
+  const cnt = id => Object.values(state.artikel).filter(a => a.ort_id === id).length;
+  let h = '<div class="grp"><span class="lbl">Lagerorte</span><div class="list">' + (state.orte.length ? state.orte.map(o =>
+    '<button class="orow" data-editort="' + esc(o.id) + '"><span class="ic">' + esc(o.icon) + '</span><span class="n"><b>' + esc(o.name) + "</b><small>" +
+    cnt(o.id) + " Artikel · „bald fällig“ " + o.bald_tage + " Tage vorher</small></span><span class=\"chev\">›</span></button>").join("")
+    : '<div class="empty">Noch keine Lagerorte.</div>') + "</div>" +
+    '<button class="ghost" id="addOrt">+ Lagerort hinzufügen</button></div>';
+  h += '<div class="grp"><span class="lbl">Konto</span><p class="hint left">Angemeldet als <b>' + esc(state.email) + "</b></p>" +
+    '<button class="ghost" id="logout">Abmelden</button></div>';
+  h += '<p class="hint">Produktdaten und Bilder: Open Food Facts (offene Datenbank).</p>';
+  openSheet("Einstellungen", h, {icon: "⚙️"});
+}
+let oe = null;
+function openOrt(id){
+  const o = id ? ortOf(id) : null;
+  const maxSort = state.orte.reduce((m, x) => Math.max(m, x.sortierung || 0), 0);
+  oe = o ? Object.assign({}, o) : {id: null, name: "", icon: "🧊", bald_tage: 30, sortierung: maxSort + 1};
+  sheetMode = "ort";
+  drawOrt();
+}
+function drawOrt(){
+  const used = oe.id ? Object.values(state.artikel).filter(a => a.ort_id === oe.id).length : 0;
+  let h = '<label for="oName">Name<input class="field" id="oName" autocomplete="off" placeholder="z. B. Kühlschrank" value="' + esc(oe.name) + '"></label>';
+  h += '<div class="grp"><span class="lbl">Symbol</span><div class="chips wrapc">' + ORT_ICONS.map(ic =>
+    '<button class="chip emo' + (oe.icon === ic ? " on" : "") + '" data-oicon="' + ic + '" aria-pressed="' + (oe.icon === ic) + '">' + ic + "</button>").join("") + "</div></div>";
+  h += '<div class="grp"><span class="lbl">„Bald fällig“ ab wie vielen Tagen vor Ablauf?</span><div class="amount">' +
+    '<button class="step" data-ostep="-1" aria-label="Weniger">−</button><output id="oTage">' + oe.bald_tage + "</output>" +
+    '<button class="step" data-ostep="1" aria-label="Mehr">+</button></div><p class="hint">Truhe: 30 Tage passt meist. Kühlschrank eher 2–3 Tage.</p></div>';
+  h += '<button class="primary" id="oSave">Speichern</button>';
+  if (oe.id) h += used ? '<p class="hint">Löschen geht erst, wenn hier nichts mehr liegt (' + used + " Artikel).</p>" : '<button class="danger" id="oDel">Lagerort löschen</button>';
+  h += '<button class="textbtn" id="oBack">Zurück</button>';
+  openSheet(oe.id ? "Lagerort ändern" : "Neuer Lagerort", h, {icon: oe.icon});
+}
+function saveOrt(){
+  const name = ($("oName").value || "").trim();
+  if (!name) { toast("Bitte einen Namen eingeben."); return; }
+  if (state.orte.some(o => o.id !== oe.id && norm(o.name) === norm(name))) { toast("Diesen Namen gibt es schon."); return; }
+  enqueue({t: "upsert", tbl: "vorrat_orte", row: {id: oe.id || uuid(), name, icon: oe.icon, bald_tage: oe.bald_tage, sortierung: oe.sortierung || 0}});
+  toast("Gespeichert");
+  openSettings();
+}
+
+/* ---------- Toast ---------- */
+let toastTimer = null, toastUndo = null;
+function toast(text, undo){
+  $("toastText").textContent = text;
+  toastUndo = undo || null;
+  $("toastBtn").hidden = !undo;
+  $("toast").classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").classList.remove("show"), undo ? 6000 : 2500);
+}
+$("toastBtn").addEventListener("click", () => { if (toastUndo) toastUndo(); toastUndo = null; $("toast").classList.remove("show"); });
+
+/* ---------- Ereignisse ---------- */
+$("scanBtn").addEventListener("click", startScan);
+$("manBtn").addEventListener("click", openNew);
+$("setBtn").addEventListener("click", openSettings);
+$("closeSheet").addEventListener("click", closeTop);
+$("scanClose").addEventListener("click", closeTop);
+$("scanManual").addEventListener("click", openCodeEntry);
+$("torch").addEventListener("click", toggleTorch);
+$("sheet").addEventListener("click", e => { if (e.target === $("sheet")) closeTop(); });
+$("q").addEventListener("input", e => { view.q = e.target.value; render(); });
+$("sortBtn").addEventListener("click", () => { view.sort = view.sort === "name" ? "ablauf" : "name"; render(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && ($("sheet").classList.contains("open") || !$("scan").hidden)) closeTop();
+  if (e.key === "Enter" && e.target && e.target.id === "cIn") { e.preventDefault(); goCode(); }
+});
+document.addEventListener("error", e => {
+  const t = e.target;
+  if (t && t.tagName === "IMG" && t.parentNode && t.parentNode.classList.contains("thumb")) t.parentNode.textContent = "📦";
+}, true);
+
+$("sheetBody").addEventListener("input", e => {
+  const t = e.target;
+  if (sheetMode === "form" && f) {
+    if (t.id === "fName") { f.name = t.value; f.nameTouched = true; }
+    else if (t.id === "fNotiz") f.notiz = t.value;
+  } else if (sheetMode === "ort" && oe && t.id === "oName") oe.name = t.value;
+});
+$("sheetBody").addEventListener("change", e => {
+  const t = e.target;
+  if (sheetMode !== "form" || !f) return;
+  if (t.id === "fEin") {
+    f.eingefroren = t.value || todayKey();
+    if (f.monate) { f.datum = addMonths(f.eingefroren, f.monate); if ($("fDat")) $("fDat").value = f.datum; }
+    updateResult();
+  } else if (t.id === "fDat") {
+    f.datum = t.value || null;
+    if (f.selbst) {
+      f.monate = HALT_MONATE.find(n => f.datum && addMonths(f.eingefroren, n) === f.datum) || null;
+      document.querySelectorAll("[data-fmon]").forEach(b => b.classList.toggle("on", Number(b.dataset.fmon) === f.monate));
+    }
+    updateResult();
+  }
+});
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("button, [data-edit]");
+  if (!t) return;
+  const d = t.dataset;
+
+  if (d.take) { takeOne(d.take); if (d.close) closeTop(); return; }
+  if (d.edit) { openEdit(d.edit); return; }
+  if (d.ort) { view.ort = d.ort; render(); return; }
+  if (t.classList.contains("kpi")) { const s = d.status || null; view.status = view.status === s ? null : s; render(); return; }
+  if (d.editort) { openOrt(d.editort); return; }
+
+  if (sheetMode === "form" && f) {
+    if (d.fort) { f.ort_id = d.fort; drawForm(); return; }
+    if (d.fstep) { f.anzahl = Math.max(1, Math.min(999, f.anzahl + Number(d.fstep))); $("fAnz").textContent = f.anzahl; return; }
+    if (d.fart) {
+      f.selbst = d.fart === "selbst";
+      if (f.selbst && !f.datum) { f.monate = f.monate || 6; f.datum = addMonths(f.eingefroren, f.monate); }
+      drawForm(); return;
+    }
+    if (d.fmode) { f.mode = d.fmode; drawForm(); return; }
+    if (d.fy) { f.y = Number(d.fy); drawForm(); return; }
+    if (d.fm) {
+      f.m = Number(d.fm);
+      if (!f.y) { const now = new Date(); f.y = f.m >= now.getMonth() + 1 ? now.getFullYear() : now.getFullYear() + 1; }
+      drawForm(); return;
+    }
+    if (d.fmon) { f.monate = Number(d.fmon); f.datum = addMonths(f.eingefroren || todayKey(), f.monate); drawForm(); return; }
+    if (d.name) {
+      f.name = d.name; f.nameTouched = true; $("fName").value = d.name;
+      document.querySelectorAll("[data-name]").forEach(b => b.classList.toggle("on", b === t));
+      return;
+    }
+  }
+  if (sheetMode === "ort" && oe) {
+    if (d.oicon) { oe.icon = d.oicon; drawOrt(); return; }
+    if (d.ostep) {
+      const i = BALD_STUFEN.findIndex(x => x >= oe.bald_tage);
+      const cur = i < 0 ? BALD_STUFEN.length - 1 : i;
+      oe.bald_tage = BALD_STUFEN[Math.max(0, Math.min(BALD_STUFEN.length - 1, cur + Number(d.ostep)))];
+      $("oTage").textContent = oe.bald_tage; return;
+    }
+  }
+
+  switch (t.id) {
+    case "fSave": saveForm(false); break;
+    case "fSaveNext": saveForm(true); break;
+    case "fDel": { const id = f && f.id; closeTop(); if (id) removeItem(id); break; }
+    case "cGo": goCode(); break;
+    case "addOrt": openOrt(null); break;
+    case "oSave": saveOrt(); break;
+    case "oDel": { const id = oe.id; enqueue({t: "delete", tbl: "vorrat_orte", id}); toast("Lagerort gelöscht"); openSettings(); break; }
+    case "oBack": openSettings(); break;
+    case "logout": closeTop(); sb.auth.signOut(); break;
+    case "resetFilter": view.ort = "alle"; view.status = null; view.q = ""; $("q").value = ""; render(); break;
+  }
+});
+
+/* ---------- Laden, Abgleich, Anmeldung ---------- */
+async function fetchAll(build){
+  const out = [], size = 1000;
+  for (let from = 0; ; from += size) {
+    const { data, error } = await build().range(from, from + size - 1);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < size) break;
+  }
+  return out;
+}
+async function loadAll(){
+  const [orte, art, prod] = await Promise.all([
+    fetchAll(() => sb.from("vorrat_orte").select("*").order("id")),
+    fetchAll(() => sb.from("vorrat_artikel").select("*").order("id")),
+    fetchAll(() => sb.from("vorrat_produkte").select("*").order("barcode"))
+  ]);
+  state.orte = orte;
+  const am = {}; art.forEach(a => { am[a.id] = a; }); state.artikel = am;
+  const pm = {}; prod.forEach(p => { pm[p.barcode] = p; }); state.produkte = pm;
+  queue.forEach(applyOp);
+  sortOrte();
+  state.loaded = true;
+  cacheSave(); render();
+  if (sheetMode === "settings") openSettings();
+}
+function subscribe(){
+  if (channel) sb.removeChannel(channel);
+  channel = sb.channel("vorrat");
+  ["vorrat_orte", "vorrat_artikel", "vorrat_produkte"].forEach(tbl => {
+    channel.on("postgres_changes", {event: "*", schema: "public", table: tbl}, p => {
+      const k = keyCol(tbl);
+      if (p.eventType === "DELETE") { if (p.old && p.old[k]) applyOp({t: "delete", tbl, id: p.old[k]}); }
+      else if (p.new && p.new[k]) applyOp({t: "upsert", tbl, row: p.new});
+      queue.forEach(op => { if (op.tbl === tbl) applyOp(op); });
+      cacheSave(); render();
+      if (sheetMode === "settings") openSettings();
+    });
+  });
+  channel.subscribe();
+}
+async function resync(){
+  if (!sb || !state.email) return;
+  try { await loadAll(); note(""); } catch (e) {}
+  flush();
+  if (!channel) subscribe();
+}
+function showLogin(msg){
+  $("loginView").hidden = false; $("app").hidden = true; $("bar").hidden = true;
+  $("lMsg").textContent = msg || "";
+}
+function showView(){
+  $("loginView").hidden = true; $("app").hidden = false; $("bar").hidden = false;
+  render();
+}
+async function afterLogin(session){
+  const email = String(session && session.user && session.user.email || "").toLowerCase();
+  const { data, error } = await sb.from("mitglieder").select("email").limit(1);
+  if (error) {
+    if (state.email) { state.offline = true; note("Keine Verbindung – du siehst den zuletzt geladenen Stand. Änderungen werden gespeichert, sobald wieder Netz da ist."); renderSync(); }
+    else showLogin("Die Verbindung klappt gerade nicht. Bitte Internet prüfen.");
+    return;
+  }
+  if (!data || !data.length) { await sb.auth.signOut(); showLogin("Diese Adresse hat noch keinen Zugriff. Bitte Thomas fragen."); return; }
+  if (state.email && state.email !== email) { state.orte = []; state.artikel = {}; state.produkte = {}; }
+  state.email = email;
+  showView();
+  try { await loadAll(); note(""); }
+  catch (e) { try { console.warn(e); } catch (x) {} note("Die Daten konnten nicht geladen werden. Bitte Internet prüfen."); }
+  subscribe();
+  flush();
+}
+$("loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const email = $("lEmail").value.trim().toLowerCase(), pw = $("lPw").value;
+  if (!email || !pw) { $("lMsg").textContent = "Bitte E-Mail und Passwort eingeben."; return; }
+  $("lBtn").disabled = true; $("lMsg").textContent = "Melde an …";
+  const { data, error } = await sb.auth.signInWithPassword({email, password: pw});
+  $("lBtn").disabled = false;
+  if (error) { $("lMsg").textContent = /invalid/i.test(error.message || "") ? "E-Mail oder Passwort stimmt nicht." : "Anmelden hat nicht geklappt. Bitte Internet prüfen."; return; }
+  $("lPw").value = ""; $("lMsg").textContent = "";
+  await afterLogin(data.session);
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && state.email) { render(); resync(); }
+});
+window.addEventListener("online", resync);
+
+async function start(){
+  if (!window.supabase || typeof window.supabase.createClient !== "function") {
+    const c = lsGet(LS_CACHE);
+    if (c && cacheLoad()) { state.email = c.email; showView(); note("Keine Verbindung – du siehst den zuletzt geladenen Stand."); }
+    else showLogin("Die App konnte nicht geladen werden. Bitte Internet prüfen und neu öffnen.");
+    return;
+  }
+  sb = window.supabase.createClient(SB_URL, SB_KEY, {auth: {persistSession: true, autoRefreshToken: true, storageKey: "familie-apps-auth"}});
+  sb.auth.onAuthStateChange(ev => {
+    if (ev === "SIGNED_OUT") {
+      lsDel(LS_CACHE); state.email = ""; state.orte = []; state.artikel = {}; state.produkte = {}; state.loaded = false;
+      if (channel) { sb.removeChannel(channel); channel = null; }
+      showLogin();
+    }
+  });
+  let session = null;
+  try { const { data } = await sb.auth.getSession(); session = data && data.session; } catch (e) {}
+  if (!session) {
+    const c = lsGet(LS_CACHE);
+    if (c && navigator.onLine === false && cacheLoad()) { state.email = c.email; showView(); note("Keine Verbindung – du siehst den zuletzt geladenen Stand."); return; }
+    lsDel(LS_CACHE); showLogin(); return;
+  }
+  const email = String(session.user.email || "").toLowerCase();
+  if (cacheLoad(email)) { state.email = email; showView(); }
+  await afterLogin(session);
+}
+if ("serviceWorker" in navigator) { window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); }); }
+start();
+})();
+</script>
+</body>
+</html>
