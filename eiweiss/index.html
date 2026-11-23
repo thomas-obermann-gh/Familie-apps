@@ -167,6 +167,10 @@ h2{margin:0;font-family:var(--font-display);font-weight:600;font-size:22px}
 .phead h3{flex:1;margin:0;font-family:var(--font-display);font-weight:600;font-size:22px;overflow-wrap:anywhere}
 .pbody{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;max-width:560px;width:100%;margin:0 auto}
 .pbody > *{flex-shrink:0}
+.scanbtn{width:100%;border:2px solid var(--accent);border-radius:16px;background:var(--accent-soft);color:var(--ink);font-weight:800;font-size:19px;padding:14px;display:flex;gap:10px;align-items:center;justify-content:center}
+.scanbox{position:relative;border-radius:18px;overflow:hidden;background:#000;height:min(52vh,380px)}
+.scanbox video{width:100%;height:100%;object-fit:cover;display:block}
+.scanframe{position:absolute;left:8%;right:8%;top:32%;height:36%;border:3px solid #fff;border-radius:14px;box-shadow:0 0 0 2000px rgba(0,0,0,.35);pointer-events:none}
 .search{width:100%;font-size:20px;padding:14px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface)}
 .search:focus{border-color:var(--accent);outline:none}
 .res{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
@@ -404,9 +408,18 @@ function foodIndex(){
       byName.set(r.name, {name: r.name, p: num(r.p), k: r.k == null ? NaN : num(r.k), src: "own"});
     }
   });
-  foodsCache = {list: [...byName.values()], map: byName};
+  const byCode = new Map();
+  Object.values(state.foodRows).forEach(r => {
+    if (!r || !r.barcode || r.ausgeblendet) return;
+    const f = byName.get(r.name);
+    if (f) { f.barcode = String(r.barcode); byCode.set(String(r.barcode), f); }
+  });
+  foodsCache = {list: [...byName.values()], map: byName, byCode};
   return foodsCache;
 }
+function foodByCode(code){ return foodIndex().byCode.get(String(code)) || null; }
+function offenRows(){ return Object.values(state.foodRows).filter(r => r && r.offen && !r.ausgeblendet); }
+function offenFood(name){ const r = state.foodRows[name] || {}; return {name, p: NaN, k: NaN, offen: true, barcode: r.barcode || null}; }
 function allFoods(){ return foodIndex().list; }
 function findFood(name){ return foodIndex().map.get(name) || null; }
 function portionFor(food){ const r = state.foodRows[food.name]; const p = r && r.stueck != null ? num(r.stueck) : NaN; return p > 0 ? p : (portionOf(food.name) || null); }
@@ -511,6 +524,7 @@ async function removeItem(k, id){
   toast(cleanName(it.name) + " gelöscht", () => addItem(k, it));
 }
 function itemFields(food, g, stk){
+  if (!(food.p >= 0)) return {g, stk: stk || null, p100: null, k100: null, eiweiss: 0, kcal: 0};
   return {g, stk: stk || null, p100: food.p, k100: isFinite(food.k) ? food.k : null,
           eiweiss: Math.round(g * food.p) / 100, kcal: isFinite(food.k) ? Math.round(g * food.k) / 100 : 0};
 }
@@ -564,7 +578,9 @@ function render(){
   $("zielBtn").textContent = "Grenze " + fmt(z) + " g";
   $("status").className = "status " + lv;
   $("status").textContent = statusText(t.e, z);
-  $("kcal").textContent = Math.round(t.kc).toLocaleString("de-DE") + " kcal";
+  const missing = ((state.days[k] || {}).items || []).filter(it => !it.manual && it.p100 == null).length;
+  $("kcal").textContent = Math.round(t.kc).toLocaleString("de-DE") + " kcal" +
+    (missing ? " · " + missing + (missing === 1 ? " Eintrag" : " Einträge") + " noch ohne Eiweißwert" : "");
 
   const end = addDays(k, 3) > today ? today : addDays(k, 3);
   const vals = []; for (let i = 6; i >= 0; i--) { const x = addDays(end, -i); vals.push({k: x, e: totals(x).e, z: zielOf(x)}); }
@@ -583,7 +599,7 @@ function render(){
   const items = ((state.days[k] && state.days[k].items) || []).slice().sort((a, b) => (a.t || 0) - (b.t || 0));
   const rowHtml = it =>
     '<button class="row" data-item="' + esc(it.id) + '"><span class="ic" aria-hidden="true">' + iconFor(it.name) + '</span><div class="n"><b>' + esc(cleanName(it.name)) + "</b><small>" +
-    (it.manual ? "direkt eingetragen" : it.stk ? esc(fmtStk(it.stk)) + " Stück" : esc(fmt(it.g)) + " g") + '</small></div><div class="v">' + esc(fmt(it.eiweiss)) + " g</div></button>";
+    (it.manual ? "direkt eingetragen" : it.stk ? esc(fmtStk(it.stk)) + " Stück" : esc(fmt(it.g)) + " g") + (!it.manual && it.p100 == null ? " · Wert fehlt noch" : "") + '</small></div><div class="v">' + esc(fmt(it.eiweiss)) + " g</div></button>";
   const groups = MEALS.map(m => ({id: m.id, label: m.label, items: items.filter(it => it.meal === m.id)}));
   const rest = items.filter(it => !MEALS.some(m => m.id === it.meal));
   let mh = groups.map(g => {
@@ -742,7 +758,7 @@ function openSheet(title, html, opts){
   $("sheet").classList.add("open");
   document.body.style.overflow = "hidden";
 }
-function closeSheet(){ $("sheet").classList.remove("open"); document.body.style.overflow = ""; sheetMode = null; sheetMeal = null; }
+function closeSheet(){ stopCamera(); $("sheet").classList.remove("open"); document.body.style.overflow = ""; sheetMode = null; sheetMeal = null; }
 function mealSeg(){
   return '<div class="seg" role="radiogroup" aria-label="Mahlzeit">' + MEALS.map(m =>
     '<button class="segb' + (sheetMeal === m.id ? " on" : "") + '" data-meal="' + m.id + '" role="radio" aria-checked="' + (sheetMeal === m.id) + '">' + esc(m.short) + "</button>").join("") + "</div>";
@@ -752,10 +768,15 @@ function openAdd(meal){
   if (state.readOnly) return;
   sheetMode = "add";
   sheetMeal = meal || defaultMeal();
+  const offen = offenRows();
   openSheet(meal ? mealLabel(meal) + ": Essen suchen" : "Essen suchen",
+    '<button class="scanbtn" id="goScan"><span aria-hidden="true">📷</span> Barcode scannen</button>' +
     '<input class="search" id="q" type="search" placeholder="Tippe z. B. Kiwi" autocomplete="off" enterkeyhint="search" aria-label="Essen suchen">' +
     '<div id="results"></div>' +
-    '<div class="links"><button class="ghost" id="goManual">Eiweiß direkt eintragen</button><button class="ghost" id="goNew">Neues Lebensmittel</button><button class="ghost" id="goRezept">Rezept berechnen</button></div>');
+    '<div class="links"><button class="ghost" id="goManual">Eiweiß direkt eintragen</button><button class="ghost" id="goNew">Neues Lebensmittel</button><button class="ghost" id="goRezept">Rezept berechnen</button></div>' +
+    (offen.length ? '<h2 class="lhead">Warten auf Werte</h2><div class="res">' + offen.map(r =>
+      '<button class="row" data-offen="' + esc(r.name) + '"><span class="ic" aria-hidden="true">📦</span><div class="n"><b>' + esc(r.name) +
+      "</b><small>Barcode " + esc(r.barcode || "") + ' · Eiweißwert fehlt noch</small></div><div class="v">›</div></button>').join("") + "</div>" : ""));
   $("q").addEventListener("input", () => showResults($("q").value));
   showResults("");
   setTimeout(() => { try { $("q").focus(); } catch (e) {} }, 250);
@@ -826,7 +847,7 @@ function drawAmount(){
   if (amt.mode === "stk") html += '<button class="textbtn" id="toG">Lieber in Gramm eingeben</button>';
   else html += (amt.portion ? '<button class="textbtn" id="toStk">In Stück eingeben</button>' : '<button class="textbtn" id="setPortion">Gibt es das in Stücken?</button>') +
     '<div class="box" id="portionBox" hidden><label for="pv">Wie viel wiegt 1 Stück? (Gramm)<input class="field" id="pv" inputmode="decimal" placeholder="z. B. 80"></label><button class="ghost" id="pSave">Speichern</button></div>';
-  html += '<button class="textbtn" id="editFood">Werte von diesem Lebensmittel ändern</button>';
+  html += '<button class="textbtn" id="editFood">' + (f.offen ? "Werte von der Packung eintragen" : "Werte von diesem Lebensmittel ändern") + "</button>";
   if (edit) html += '<button class="danger" id="del">Löschen</button>';
   openSheet(cleanName(f.name), html, {icon: iconFor(f.name)});
   if (amt.mode === "g") {
@@ -839,6 +860,15 @@ function calcAmount(fromInput){
   const g = grams();
   if (amt.mode === "stk") $("stkOut").textContent = fmtStk(amt.stk);
   else if (!fromInput) $("g").value = fmt(g);
+  document.querySelectorAll(".chip").forEach(c => {
+    const on = amt.mode === "stk" ? Math.abs(num(c.dataset.stk) - amt.stk) < 0.01 : Math.abs(num(c.dataset.g) - g) < 0.01;
+    c.classList.toggle("on", on);
+  });
+  if (!(amt.food.p >= 0)) {
+    $("calc").className = "result near";
+    $("calc").innerHTML = "<b>Eiweiß noch unbekannt</b><span>Wird automatisch nachgerechnet, sobald die Werte da sind.</span>";
+    return;
+  }
   const e = g * amt.food.p / 100;
   const k = state.cur, z = zielOf(k);
   let base = totals(k).e;
@@ -935,6 +965,162 @@ function saveZiel(all){
   saveDayZiel(state.cur, v);
   if (all) saveSettingZiel(v);
   closeSheet(); render();
+}
+
+/* ---------- Barcode ---------- */
+const ZXING_URL = "https://cdn.jsdelivr.net/npm/@zxing/browser@0.2.1/umd/zxing-browser.min.js";
+let scanStream = null, scanTimer = null, zxControls = null, bc = null;
+function loadScript(src){
+  return new Promise((res, rej) => {
+    const el = document.createElement("script");
+    el.src = src; el.async = true; el.onload = () => res(); el.onerror = () => rej(new Error("laden"));
+    document.head.appendChild(el);
+  });
+}
+function scanMsg(t){ const el = $("scanMsg"); if (el) el.textContent = t; }
+function stopCamera(){
+  clearTimeout(scanTimer); scanTimer = null;
+  if (zxControls) { try { zxControls.stop(); } catch (e) {} zxControls = null; }
+  if (scanStream) { try { scanStream.getTracks().forEach(t => t.stop()); } catch (e) {} scanStream = null; }
+}
+function openScan(){
+  stopCamera();
+  sheetMode = "scan";
+  openSheet("Barcode scannen",
+    '<div class="scanbox"><video id="scanVideo" playsinline muted autoplay></video><div class="scanframe"></div></div>' +
+    '<p class="hint" id="scanMsg">Halte den Strichcode der Packung in den Rahmen.</p>' +
+    '<label for="scanCode">Oder die Nummer unter dem Strichcode eintippen<input class="field" id="scanCode" inputmode="numeric" autocomplete="off" placeholder="z. B. 4008400401621"></label>' +
+    '<button class="ghost" id="scanGo">Nummer suchen</button>', {icon: "📷"});
+  startCamera();
+}
+async function startCamera(){
+  const v = $("scanVideo");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { scanMsg("Die Kamera geht hier nicht. Bitte die Nummer eintippen."); return; }
+  let det = null;
+  if ("BarcodeDetector" in window) {
+    try { det = new BarcodeDetector({formats: ["ean_13", "ean_8", "upc_a", "upc_e"]}); } catch (e) { det = null; }
+  }
+  if (det) {
+    try { scanStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: "environment"}}, audio: false}); }
+    catch (e) { scanMsg("Kein Zugriff auf die Kamera. Bitte erlauben oder die Nummer eintippen."); return; }
+    if (sheetMode !== "scan") { stopCamera(); return; }
+    v.srcObject = scanStream;
+    try { await v.play(); } catch (e) {}
+    const tick = async () => {
+      if (sheetMode !== "scan" || !scanStream) return;
+      try { const found = await det.detect(v); if (found && found.length) { onCode(found[0].rawValue); return; } } catch (e) {}
+      scanTimer = setTimeout(tick, 200);
+    };
+    tick();
+    return;
+  }
+  try { if (!window.ZXingBrowser) await loadScript(ZXING_URL); }
+  catch (e) { scanMsg("Der Scanner konnte nicht geladen werden. Bitte die Nummer eintippen."); return; }
+  if (sheetMode !== "scan") return;
+  try {
+    const reader = new window.ZXingBrowser.BrowserMultiFormatReader();
+    zxControls = await reader.decodeFromConstraints({video: {facingMode: {ideal: "environment"}}}, v, (res, err, ctl) => {
+      if (res && sheetMode === "scan") { try { ctl.stop(); } catch (x) {} onCode(res.getText()); }
+    });
+    if (sheetMode !== "scan") stopCamera();
+  } catch (e) { scanMsg("Kein Zugriff auf die Kamera. Bitte erlauben oder die Nummer eintippen."); }
+}
+async function onCode(raw){
+  const code = String(raw || "").replace(/\D/g, "");
+  if (code.length < 6 || code.length > 14) { scanMsg("Das ist keine gültige Nummer. Bitte nochmal versuchen."); return; }
+  stopCamera();
+  try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {}
+  const known = foodByCode(code);
+  if (known) { openAmount(known); toast(cleanName(known.name) + " erkannt"); return; }
+  const wartet = offenRows().find(r => String(r.barcode) === code);
+  if (wartet) { openAmount(offenFood(wartet.name)); toast(wartet.name + " erkannt"); return; }
+  sheetMode = "lookup";
+  openSheet("Barcode " + code, '<p class="hint">Suche das Produkt …</p>', {icon: "🔎", short: true});
+  let res = null;
+  try {
+    const { data, error } = await sb.functions.invoke("produkt-suche", {body: {code}});
+    res = error ? {fehler: true} : data;
+  } catch (e) { res = {fehler: true}; }
+  if (sheetMode !== "lookup") return;
+  openBarcodeForm(code, res, null);
+}
+function openBarcodeForm(code, res, offenName){
+  stopCamera();
+  sheetMode = "bcform";
+  bc = {code: String(code || ""), res: res || null, offenName: offenName || null};
+  const found = !!(res && res.gefunden), hasP = found && res.eiweiss != null;
+  let name = offenName || "";
+  if (!name && found && res.name) name = res.name + (res.marke && !norm(res.name).includes(norm(res.marke)) ? " (" + res.marke + ")" : "");
+  const intro = offenName ? "Bitte die Werte von der Packung abschreiben (pro 100 g)." :
+    hasP ? "Gefunden in der freien Produktdatenbank Open Food Facts. Bitte die Werte kurz mit der Packung vergleichen." :
+    found ? "Das Produkt ist bekannt, aber ohne Eiweißwert. Bitte von der Packung abschreiben oder später ergänzen lassen." :
+    res && res.fehler ? "Die Produktsuche klappt gerade nicht. Bitte die Werte von der Packung abschreiben oder später ergänzen lassen." :
+    "Das Produkt ist noch nicht in der Datenbank. Bitte die Werte von der Packung abschreiben oder später ergänzen lassen.";
+  const info = found ? [res.menge ? "Packung: " + res.menge : "", res.portion ? "Portion laut Packung: " + res.portion : ""].filter(Boolean).join(" · ") : "";
+  const row = state.foodRows[offenName || ""] || {};
+  const firstWord = ((name.match(/[A-Za-zÄÖÜäöüß]{4,}/) || [""])[0]);
+  let html = '<p class="hint" style="text-align:left">' + esc(intro) + "</p>" + (info ? '<p class="hint" style="text-align:left">' + esc(info) + "</p>" : "");
+  if (!offenName) html += '<h2 class="lhead">Ist es schon in der Liste?</h2>' +
+    '<input class="search" id="bLinkQ" type="search" placeholder="In der Liste suchen" autocomplete="off" value="' + esc(firstWord) + '" aria-label="In der Liste suchen">' +
+    '<div id="bLinkRes"></div><h2 class="lhead">Sonst neu anlegen</h2>';
+  html += '<label for="bName">Name<input class="field" id="bName" value="' + esc(name) + '"' + (offenName ? " readonly" : "") + ' placeholder="z. B. Butterkekse Schär"></label>' +
+    '<label for="bP">Eiweiß pro 100 g<input class="field" id="bP" inputmode="decimal" value="' + (hasP ? esc(fmt2(res.eiweiss)) : "") + '"></label>' +
+    '<label for="bK">kcal pro 100 g<input class="field" id="bK" inputmode="decimal" value="' + (found && res.kcal != null ? esc(fmt2(res.kcal)) : "") + '"></label>' +
+    '<label for="bS">Gewicht von 1 Stück in g (wenn es Stücke gibt)<input class="field" id="bS" inputmode="decimal" value="' + (num(row.stueck) > 0 ? esc(fmt2(num(row.stueck))) : "") + '"></label>' +
+    '<button class="primary" id="bSave">Speichern und eintragen</button>' +
+    (offenName ? "" : '<button class="ghost" id="bLater">Später ergänzen lassen</button>') +
+    '<p class="hint">Barcode ' + esc(bc.code) + "</p>";
+  openSheet(offenName ? "Werte eintragen" : "Neues Produkt", html, {icon: "📦"});
+  if ($("bLinkQ")) { $("bLinkQ").addEventListener("input", () => bLinkSearch($("bLinkQ").value)); bLinkSearch($("bLinkQ").value); }
+}
+function bLinkSearch(q){
+  const box = $("bLinkRes"); if (!box) return;
+  const words = norm(String(q).trim()).split(/\s+/).filter(Boolean);
+  if (!words.length) { box.innerHTML = ""; return; }
+  const list = allFoods().filter(f => { const n = norm(f.name); return words.every(w => n.includes(w)); })
+    .sort((a, b) => a.name.localeCompare(b.name, "de")).slice(0, 8);
+  box.innerHTML = list.length ? '<div class="res">' + list.map(f =>
+    '<button class="row" data-link="' + esc(f.name) + '"><span class="ic" aria-hidden="true">' + iconFor(f.name) + '</span><div class="n"><b>' + esc(cleanName(f.name)) +
+    "</b><small>" + esc(fmt(f.p)) + ' g Eiweiß in 100 g · antippen, wenn es das ist</small></div><div class="v">›</div></button>').join("") + "</div>"
+    : '<p class="hint">Nichts Passendes in der Liste.</p>';
+}
+async function deleteFoodRow(name){
+  const fr = Object.assign({}, state.foodRows); delete fr[name]; state.foodRows = fr; foodsCache = null; cacheSave();
+  const { error } = await sb.from("eiweiss_lebensmittel").delete().eq("name", name);
+  if (error) fail(error);
+}
+async function linkFood(name){
+  if (!bc) return;
+  const old = Object.values(state.foodRows).find(r => r && String(r.barcode) === bc.code && r.name !== name);
+  if (old) await deleteFoodRow(old.name);
+  await saveFoodRow({name, barcode: bc.code});
+  toast(cleanName(name) + " hat jetzt diesen Barcode");
+  const f = findFood(name); if (f) openAmount(f);
+}
+function nameTaken(name){
+  const r = state.foodRows[name];
+  if (r && String(r.barcode || "") === bc.code) return false;
+  return !!(findFood(name) || r);
+}
+async function saveBc(){
+  const name = $("bName").value.trim(), p = num($("bP").value), k = num($("bK").value), st = num($("bS").value);
+  if (!name) { toast("Bitte einen Namen eingeben."); return; }
+  if (!(p >= 0)) { toast(bc.offenName ? "Bitte den Eiweißwert eingeben." : "Bitte den Eiweißwert eingeben oder „Später ergänzen lassen“ wählen."); return; }
+  if (nameTaken(name)) { toast("Diesen Namen gibt es schon. Bitte z. B. die Marke ergänzen."); return; }
+  const old = Object.values(state.foodRows).find(r => r && String(r.barcode) === bc.code && r.name !== name);
+  if (old) await deleteFoodRow(old.name);
+  const quelle = bc.res && bc.res.gefunden && bc.res.eiweiss != null && Math.abs(p - bc.res.eiweiss) < 0.001 ? "openfoodfacts" : "packung";
+  await saveFoodRow({name, p, k: isFinite(k) ? k : null, stueck: st > 0 ? st : null, eigen: true, ausgeblendet: false, barcode: bc.code, quelle, offen: false});
+  const f = findFood(name); if (f) openAmount(f); else closeSheet();
+}
+async function saveLater(){
+  const name = $("bName").value.trim(), st = num($("bS").value);
+  if (!name) { toast("Bitte einen Namen eingeben, z. B. was vorne auf der Packung steht."); return; }
+  if (nameTaken(name)) { toast("Diesen Namen gibt es schon. Bitte z. B. die Marke ergänzen."); return; }
+  const notiz = bc.res && bc.res.gefunden ? [bc.res.marke, bc.res.menge].filter(Boolean).join(", ") || null : null;
+  await saveFoodRow({name, p: null, k: null, stueck: st > 0 ? st : null, eigen: true, ausgeblendet: false, barcode: bc.code, offen: true, notiz});
+  toast("Gemerkt. Die Werte werden später ergänzt.");
+  openAmount(offenFood(name));
 }
 
 /* ---------- Rezept-Rechner ---------- */
@@ -1149,9 +1335,14 @@ $("sheet").addEventListener("click", e => { if (e.target === $("sheet")) closeSh
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && $("sheet").classList.contains("open")) closeSheet();
   if (e.key === "Enter" && sheetMode === "amount" && e.target.id === "g") { e.preventDefault(); saveAmount(); }
+  if (e.key === "Enter" && sheetMode === "scan" && e.target.id === "scanCode") { e.preventDefault(); onCode(e.target.value); }
 });
 
 document.addEventListener("click", e => {
+  const lk = e.target.closest("[data-link]");
+  if (lk) { linkFood(lk.getAttribute("data-link")); return; }
+  const of = e.target.closest("[data-offen]");
+  if (of) { openAmount(offenFood(of.getAttribute("data-offen"))); return; }
   const zr = e.target.closest("[data-rezept]");
   if (zr) { openRezept(zr.getAttribute("data-rezept")); return; }
   const za = e.target.closest("[data-zadd]");
@@ -1193,8 +1384,12 @@ document.addEventListener("click", e => {
   if (t.dataset.g) { amt.g = num(t.dataset.g); calcAmount(); return; }
   switch (t.id) {
     case "goManual": openManual(); break;
-    case "editFood": if (state.rezepte[amt.food.name]) openRezept(amt.food.name); else openEditFood(amt.food); break;
+    case "editFood": if (amt.food.offen) openBarcodeForm(amt.food.barcode, null, amt.food.name); else if (state.rezepte[amt.food.name]) openRezept(amt.food.name); else openEditFood(amt.food); break;
     case "goRezept": openRezepte(); break;
+    case "goScan": openScan(); break;
+    case "scanGo": onCode($("scanCode").value); break;
+    case "bSave": saveBc(); break;
+    case "bLater": saveLater(); break;
     case "rzNew": rzStart(null); break;
     case "rzResume": drawRezept(); break;
     case "rzSave": saveRezept(); break;
@@ -1268,7 +1463,8 @@ function subscribe(){
       if (p.new && p.new.datum) { ensureDay(p.new.datum).ziel = num(p.new.ziel); render(); }
     })
     .on("postgres_changes", {event: "*", schema: "public", table: "eiweiss_lebensmittel"}, p => {
-      if (p.new && p.new.name) { state.foodRows = Object.assign({}, state.foodRows, {[p.new.name]: p.new}); foodsCache = null; render(); }
+      if (p.eventType === "DELETE") { if (p.old && p.old.name && state.foodRows[p.old.name]) { const fr = Object.assign({}, state.foodRows); delete fr[p.old.name]; state.foodRows = fr; foodsCache = null; render(); } }
+      else if (p.new && p.new.name) { state.foodRows = Object.assign({}, state.foodRows, {[p.new.name]: p.new}); foodsCache = null; render(); }
     })
     .on("postgres_changes", {event: "*", schema: "public", table: "eiweiss_rezepte"}, p => {
       const r = Object.assign({}, state.rezepte);

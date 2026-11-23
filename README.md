@@ -18,3 +18,16 @@ er gibt ohne Anmeldung keinen Zugriff auf Daten.
 
 Neue App: eigenen Ordner anlegen, eigene Tabellen mit Präfix (z. B. `einkauf_*`) und dieselbe
 `mitglieder`-Regel verwenden.
+
+## Barcode (Eiweiß-Tagebuch)
+
+- Scannen im Blatt „Essen suchen“ → „Barcode scannen“. Android/Chrome nutzt den eingebauten
+  Barcode-Scanner des Browsers, andere Geräte laden ZXing nach. Nummer eintippen geht immer.
+- Bekannter Barcode → direkt zur Menge. Unbekannt → Edge Function `produkt-suche`
+  (Quelltext unter `supabase/functions/produkt-suche/`) fragt Open Food Facts nach Name und
+  Nährwerten pro 100 g. Die Werte werden vor dem Speichern angezeigt und sollen mit der Packung
+  verglichen werden. Alternativ wird der Barcode einem vorhandenen Lebensmittel zugeordnet.
+- „Später ergänzen lassen“ legt das Produkt mit `offen = true` und ohne Werte an. Einträge
+  dafür werden mit Eiweiß 0 gespeichert und automatisch nachgerechnet, sobald `p` gesetzt
+  wird (Trigger `eiweiss_eintraege_nachrechnen`). Nachtragen per SQL:
+  `update eiweiss_lebensmittel set p = …, k = …, quelle = 'claude' where name = '…';`
